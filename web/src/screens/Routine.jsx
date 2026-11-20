@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion, Reorder, AnimatePresence } from 'framer-motion';
+import { m as motion, Reorder, AnimatePresence } from 'framer-motion';
 import { Plus, GripVertical, Minus, Trash2, Moon } from 'lucide-react';
 import { api, mins, buzz, todayKey, fromKey } from '../api';
 import { Sheet, Empty, EMOJIS, COLORS, soft, spring, TimePicker } from '../ui';

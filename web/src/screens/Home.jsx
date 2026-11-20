@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CalendarDays, ChartColumnBig, Plus, Trash2, Sprout, Check as CheckIcon } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { api, todayKey, addDays, fmt, mins, fromKey, toKey, buzz } from '../api';
 import { Check, Ring, Counter, Segmented, Sheet, listParent, listChild, Empty, spring, soft } from '../ui';
 
@@ -21,7 +20,7 @@ export default function Home({ date, setDate, refreshKey, openWeekly, openAddTod
     onCounts?.({ routineLeft: data.routine.filter((r) => !r.done).length, todoLeft: data.todos.filter((t) => !t.done).length });
     // Confetti the moment the whole routine is done.
     if (lastPct.current !== null && lastPct.current < 100 && data.percent === 100) {
-      confetti({ particleCount: 140, spread: 80, origin: { y: 0.35 }, colors: ['#7c3aed', '#ec4899', '#f97316', '#22c55e', '#38bdf8'] });
+      import('canvas-confetti').then(({ default: confetti }) => confetti({ particleCount: 140, spread: 80, origin: { y: 0.35 }, colors: ['#7c3aed', '#ec4899', '#f97316', '#22c55e', '#38bdf8'] }));
       buzz(60);
     }
     lastPct.current = data.percent;
@@ -109,7 +108,7 @@ export default function Home({ date, setDate, refreshKey, openWeekly, openAddTod
             </div>
 
             {/* Progress summary */}
-            <motion.div className="card" style={{ padding: 16, marginTop: 12, display: 'flex', gap: 16, alignItems: 'center' }} layout>
+            <motion.div className="card" style={{ padding: 16, marginTop: 12, display: 'flex', gap: 16, alignItems: 'center' }}>
               <Ring percent={data.percent} id="homeRing">
                 <div style={{ fontWeight: 800, fontSize: 20 }}><Counter value={data.percent} suffix="%" /></div>
               </Ring>
@@ -143,7 +142,7 @@ export default function Home({ date, setDate, refreshKey, openWeekly, openAddTod
                       {data.routine.map((r) => {
                         const inside = r.holdsTodos ? data.todos.filter((t) => t.parentId === r._id) : [];
                         return (
-                          <motion.div key={r._id} variants={listChild} layout style={{ borderTop: '1px solid var(--line)' }} className="routine-block">
+                          <motion.div key={r._id} variants={listChild} style={{ borderTop: '1px solid var(--line)' }} className="routine-block">
                             <div className="item" style={{ borderTop: 0 }} onClick={() => toggleRoutine(r._id)}>
                               <div className="bar" style={{ background: r.color }} />
                               <div className="emoji" style={{ background: `${r.color}1f` }}>{r.emoji}</div>
@@ -158,7 +157,7 @@ export default function Home({ date, setDate, refreshKey, openWeekly, openAddTod
                               <div style={{ padding: '0 16px 12px 70px' }}>
                                 <AnimatePresence initial={false}>
                                   {inside.map((t) => (
-                                    <motion.div key={t._id} layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                                    <motion.div key={t._id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                                       className="row" style={{ padding: '6px 0', gap: 10 }} onClick={() => toggleTodo(t)}>
                                       <Check size={20} done={t.done} color={r.color} onToggle={() => toggleTodo(t)} />
                                       <span className={`small ${t.done ? 'faint' : ''}`} style={{ textDecoration: t.done ? 'line-through' : 'none', fontWeight: 500 }}>{t.title}</span>
@@ -231,8 +230,8 @@ export default function Home({ date, setDate, refreshKey, openWeekly, openAddTod
 
 function HabitCard({ kicker, gradient, habit, emptyText, onToggle, onOpen }) {
   return (
-    <motion.div className="habit" style={{ background: gradient }} whileTap={{ scale: 0.97 }} onClick={habit ? onToggle : onOpen} layout>
-      <motion.div className="shine" animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 4 }} />
+    <motion.div className="habit" style={{ background: gradient }} whileTap={{ scale: 0.97 }} onClick={habit ? onToggle : onOpen}>
+      <div className="shine" />
       <div>
         <div className="kicker">{kicker}</div>
         <div className="h-title">{habit ? `${habit.emoji} ${habit.title}` : emptyText}</div>
@@ -261,7 +260,7 @@ function DayBudget({ b }) {
   ];
   const total = Math.max(b.awakeMinutes, b.plannedMinutes);
   return (
-    <motion.div className="card" style={{ padding: 16, marginTop: 12 }} layout>
+    <motion.div className="card" style={{ padding: 16, marginTop: 12 }}>
       <div className="between">
         <div>
           <div className="bold">Day plan</div>
@@ -292,7 +291,7 @@ function DayBudget({ b }) {
 // Drag a row left to reveal delete.
 function SwipeRow({ children, onDelete }) {
   return (
-    <motion.div style={{ position: 'relative', borderTop: '1px solid var(--line)' }} variants={listChild} layout
+    <motion.div style={{ position: 'relative', borderTop: '1px solid var(--line)' }} variants={listChild}
       exit={{ opacity: 0, height: 0, transition: { duration: 0.2 } }}>
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,#fff,#f43f5e)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 20, color: '#fff' }}>
         <Trash2 size={20} />
@@ -309,7 +308,7 @@ function Skeleton() {
   return (
     <div>
       {[128, 120, 300].map((h, i) => (
-        <motion.div key={i} className="card" style={{ height: h, marginTop: 12 }} animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.2 }} />
+        <div key={i} className="card pulse" style={{ height: h, marginTop: 12 }} />
       ))}
     </div>
   );

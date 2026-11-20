@@ -4,3 +4,7 @@ server/data/
 .env
 .DS_Store
 out/
+
+# Android Studio / IntelliJ project settings (per machine)
+.idea/
+*.iml

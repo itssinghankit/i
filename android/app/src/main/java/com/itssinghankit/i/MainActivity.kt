@@ -7,6 +7,8 @@ import android.net.Uri
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.View
 import android.view.animation.AnticipateInterpolator
@@ -85,7 +87,9 @@ class MainActivity : AppCompatActivity() {
             overScrollMode = WebView.OVER_SCROLL_NEVER
             addJavascriptInterface(Bridge(), "Android")
             webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView, url: String) { pageReady = true; pageUrl = url }
+                override fun onPageFinished(view: WebView, url: String) { pageReady = true; pageUrl = url; pushSafeArea() }
+                // Send the bar sizes as early as possible too, so the first frame already has the margins.
+                override fun onPageCommitVisible(view: WebView, url: String) { pushSafeArea() }
 
                 // The page itself couldn't load (no internet, server not running, wrong address).
                 override fun onReceivedError(view: WebView, req: WebResourceRequest, err: WebResourceError) {
@@ -109,11 +113,19 @@ class MainActivity : AppCompatActivity() {
             isEnabled = false // the app has its own gestures; pull-to-refresh is off by default
             setBackgroundColor(Color.parseColor("#F7F6FC"))
         }
-        // Android 15+ draws apps behind the status bar and gesture bar. Pad the app so nothing hides under them.
-        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+        // Full screen (edge to edge): the app draws behind the status bar and the gesture bar.
+        // We tell the page how tall those bars are, and the design adds that as margin to its content
+        // (CSS variables --safe-t / --safe-b / --safe-l / --safe-r, in CSS pixels).
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        if (android.os.Build.VERSION.SDK_INT >= 29) window.isNavigationBarContrastEnforced = false
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
-            WindowInsetsCompat.CONSUMED
+            val d = resources.displayMetrics.density
+            safe = floatArrayOf(bars.top / d, bars.bottom / d, bars.left / d, bars.right / d)
+            pushSafeArea()
+            insets
         }
         setContentView(root)
         // Dark clock/battery icons on the app's light background (set after the splash theme is replaced).
@@ -122,12 +134,68 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = true
         }
 
-        web.loadUrl(urlFor(intent))
+        loadApp(urlFor(intent))
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { if (web.canGoBack()) web.goBack() else finish() }
         })
         // Only real releases ask "new version?"; debug builds from Android Studio don't.
         if (!BuildConfig.DEBUG) UpdateChecker.check(this) { version, url -> showUpdate(version, url) }
+    }
+
+    // ---- Status bar / gesture bar sizes for the page (full-screen layout) ----
+    private var safe = floatArrayOf(0f, 0f, 0f, 0f) // top, bottom, left, right in CSS px
+
+    private fun pushSafeArea() {
+        if (!::web.isInitialized) return
+        val (t, b, l, r) = safe.toList()
+        web.evaluateJavascript(
+            "(function(s){s.setProperty('--safe-t','${t}px');s.setProperty('--safe-b','${b}px');" +
+                "s.setProperty('--safe-l','${l}px');s.setProperty('--safe-r','${r}px')})(document.documentElement.style)", null)
+    }
+
+    // ---- Load watchdog ----
+    // On some mobile networks the very first load can stall (the app's code file never arrives) and the
+    // WebView never retries, leaving a blank screen. A reload then works in about a second. So: if the
+    // screens haven't appeared WATCHDOG_MS after a load, reload (up to MAX_RELOADS times), then show the
+    // "Can't open i" screen with a Retry button.
+    private val main = Handler(Looper.getMainLooper())
+    private var loadAttempts = 0
+    private var showingError = false
+    private var watchdog: Runnable? = null
+
+    private fun loadApp(url: String) {
+        showingError = false
+        loadAttempts++
+        web.loadUrl(url)
+        armWatchdog(url)
+    }
+
+    private fun armWatchdog(url: String) {
+        watchdog?.let { main.removeCallbacks(it) }
+        val check = Runnable {
+            if (showingError || isFinishing) return@Runnable
+            var answered = false
+            // "Booted" = the React app has drawn something into #root.
+            web.evaluateJavascript("(function(){var r=document.getElementById('root');return !!(r&&r.childElementCount)})()") { v ->
+                answered = true
+                if (v != "true") retryOrGiveUp(url)
+            }
+            // If the page is so stuck it can't even answer, treat it as not booted.
+            main.postDelayed({ if (!answered) retryOrGiveUp(url) }, 2500)
+        }
+        watchdog = check
+        main.postDelayed(check, WATCHDOG_MS)
+    }
+
+    private fun retryOrGiveUp(url: String) {
+        if (showingError || isFinishing) return
+        if (loadAttempts <= MAX_RELOADS) loadApp(url)
+        else showLoadError(url, "The app took too long to load.")
+    }
+
+    override fun onDestroy() {
+        watchdog?.let { main.removeCallbacks(it) }
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -146,14 +214,16 @@ class MainActivity : AppCompatActivity() {
      */
     private fun showLoadError(url: String, reason: String) {
         pageReady = true // let the splash go away so the message is visible
+        showingError = true
+        watchdog?.let { main.removeCallbacks(it) }
         val esc = { s: String -> s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") }
         val hint = if (BuildConfig.DEBUG)
-            "This is a <b>debug</b> build, so it loads your Mac's local server. Start it with <code>npm start</code> in the <code>server</code> folder, then tap Retry. (On a real phone, 10.0.2.2 doesn't work: set <code>I_DEV_URL</code> to your Mac's Wi-Fi address.)"
+            "This is a <b>debug</b> build, so it loads your Mac's local server. Start it with <code>npm start</code> in the <code>server</code> folder, keep the USB cable in, then tap Retry."
         else "Check your internet connection and tap Retry."
         val html = """
             <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
             <style>
-              body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#F7F6FC;
+              body{margin:0;height:100vh;box-sizing:border-box;padding:var(--safe-t,0) 0 var(--safe-b,0);display:flex;align-items:center;justify-content:center;background:#F7F6FC;
                    font-family:system-ui,sans-serif;color:#16151D;text-align:center}
               .c{padding:28px;max-width:340px}
               .logo{width:72px;height:72px;border-radius:22px;margin:0 auto 18px;background:linear-gradient(135deg,#7C3AED,#EC4899 55%,#F97316)}
@@ -201,8 +271,18 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface fun refreshWidget() = TodayWidgetProvider.refreshAll(this@MainActivity)
         @JavascriptInterface fun appVersion(): String = BuildConfig.VERSION_NAME
 
+        /** The page says whether it's light (dark icons) or dark (white icons) behind the status bar. */
+        @JavascriptInterface fun setLightBars(light: Boolean) {
+            runOnUiThread {
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = light
+                    isAppearanceLightNavigationBars = light
+                }
+            }
+        }
+
         /** "Retry" on the can't-load screen: load the app again. */
-        @JavascriptInterface fun retry() { runOnUiThread { web.loadUrl(urlFor(null)) } }
+        @JavascriptInterface fun retry() { runOnUiThread { loadAttempts = 0; loadApp(urlFor(null)) } }
 
         /** Opens the Google account sheet; the result goes back to window.onNativeGoogleCredential / onNativeGoogleError. */
         @JavascriptInterface fun googleSignIn() {
@@ -234,5 +314,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_ROUTE = "route"
         private const val SPLASH_MAX_MS = 3000L
+        private const val WATCHDOG_MS = 6000L
+        private const val MAX_RELOADS = 2
     }
 }

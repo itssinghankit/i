@@ -1,11 +1,16 @@
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sun, Repeat, Flag, Ellipsis, Sprout, X, LogOut, Scale, Rocket, Lightbulb, GraduationCap, RotateCcw } from 'lucide-react';
+import { useEffect, useState, lazy, Suspense } from 'react';
+import { m as motion, AnimatePresence } from 'framer-motion';
+import { Sun, Repeat, Flag, Ellipsis, Sprout, X, UserRound, ChevronRight, Scale, Rocket, Lightbulb, GraduationCap, RotateCcw } from 'lucide-react';
 import { api, todayKey, addDays, fmt, buzz, mins } from './api';
 import { Sheet, spring, soft, useToast, EMOJIS, TimePicker } from './ui';
 import Home from './screens/Home';
-import Routine from './screens/Routine';
-import { Resolutions, NeedsWants, WantToBe, Insights } from './screens/Goals';
+import Account from './screens/Account';
+// Loaded only the first time you open them, so the app starts with less code.
+const Routine = lazy(() => import('./screens/Routine'));
+const Resolutions = lazy(() => import('./screens/Goals').then((m) => ({ default: m.Resolutions })));
+const NeedsWants = lazy(() => import('./screens/Goals').then((m) => ({ default: m.NeedsWants })));
+const WantToBe = lazy(() => import('./screens/Goals').then((m) => ({ default: m.WantToBe })));
+const Insights = lazy(() => import('./screens/Goals').then((m) => ({ default: m.Insights })));
 
 const TABS = [
   { id: 'home', label: 'Today', icon: Sun },
@@ -31,7 +36,9 @@ export default function App({ user = null, onSignOut = null }) {
   const [counts, setCounts] = useState({});
   const [toast, setToast] = useToast();
   const [canReset, setCanReset] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   useEffect(() => { api.get('/health').then((h) => setCanReset(!!h.canReset)).catch(() => {}); }, []);
+  useEffect(() => { window.Android?.setLightBars?.(true); }, []); // light app → dark status bar icons
   const refresh = () => setRefreshKey((k) => k + 1);
 
   // Deep links from the Android widget: #add-todo opens the add sheet, #home goes to today.
@@ -55,9 +62,11 @@ export default function App({ user = null, onSignOut = null }) {
   return (
     <div className="frame">
       <Blobs />
+      {/* Soft fade behind the phone's status bar, so scrolled content doesn't clash with the clock */}
+      <div className="status-scrim" />
       <div className="scroll" key={screen}>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div key={screen} initial={{ opacity: 0, x: dir * 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -28 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}>
+        <Suspense fallback={<div className="card pulse" style={{ height: 220, marginTop: 70 }} />}>
+          <motion.div key={screen} initial={{ opacity: 0, x: dir * 18 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}>
             {screen === 'home' && <Home date={date} setDate={setDate} refreshKey={refreshKey} openWeekly={() => setWeeklyOpen(true)} openAddTodo={setTodoFor} onCounts={setCounts} />}
             {screen === 'routine' && <Routine onChanged={refresh} />}
             {screen === 'resolutions' && <Resolutions />}
@@ -65,7 +74,7 @@ export default function App({ user = null, onSignOut = null }) {
             {screen === 'wantToBe' && <WantToBe onChanged={refresh} />}
             {screen === 'insights' && <Insights onChanged={refresh} toast={setToast} />}
           </motion.div>
-        </AnimatePresence>
+        </Suspense>
       </div>
 
       {/* Floating tab bar + habit-of-the-week button */}
@@ -92,10 +101,9 @@ export default function App({ user = null, onSignOut = null }) {
         <motion.button className="fab" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} transition={{ ...spring, delay: 0.2 }}
           whileTap={{ scale: 0.88, rotate: 20 }} onClick={() => { buzz(10); setWeeklyOpen(true); }} aria-label="Habit of the week">
           {/* A sprout = a habit growing. It "grows" a little every few seconds. */}
-          <motion.span style={{ display: 'grid', transformOrigin: '50% 90%' }}
-            animate={{ scaleY: [1, 1.18, 0.95, 1], rotate: [0, -6, 4, 0] }} transition={{ repeat: Infinity, repeatDelay: 3, duration: 1.1 }}>
+          <span className="sprout">
             <Sprout size={28} strokeWidth={2.1} color="#16a34a" />
-          </motion.span>
+          </span>
         </motion.button>
       </div>
 
@@ -105,15 +113,14 @@ export default function App({ user = null, onSignOut = null }) {
           <>
             <motion.div className="scrim" onClick={() => setMenu(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
             <motion.div className="menu" initial={{ opacity: 0, scale: 0.6, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.7, y: 20 }} transition={spring}>
-              {user && (
-                <div className="account">
-                  {user.picture ? <img src={user.picture} alt="" referrerPolicy="no-referrer" /> : <span className="avatar">{(user.name || '?')[0]}</span>}
-                  <div style={{ minWidth: 0 }}>
-                    <div className="bold" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</div>
-                    <div className="tiny faint" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
-                  </div>
+              <button className="account" onClick={() => { setMenu(false); setAccountOpen(true); }}>
+                {user?.picture ? <img src={user.picture} alt="" referrerPolicy="no-referrer" /> : <span className="avatar">{user ? (user.name || '?')[0] : <UserRound size={20} />}</span>}
+                <div style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
+                  <div className="bold" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user ? user.name : 'Account'}</div>
+                  <div className="tiny faint" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user ? user.email : 'Not signed in'}</div>
                 </div>
-              )}
+                <ChevronRight size={18} color="#9a98a8" />
+              </button>
               {MORE.map((m, i) => (
                 <motion.button key={m.id} onClick={() => open(m.id)} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.04 * i }}>
                   <m.icon size={21} strokeWidth={1.7} color="#5d5b6b" /> {m.label}
@@ -127,11 +134,6 @@ export default function App({ user = null, onSignOut = null }) {
                 <RotateCcw size={21} strokeWidth={1.7} color="#5d5b6b" /> Reset demo data
               </motion.button>
               )}
-              {onSignOut && (
-                <motion.button onClick={() => { setMenu(false); onSignOut(); }} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} style={{ color: '#e11d48' }}>
-                  <LogOut size={21} strokeWidth={1.7} /> Sign out
-                </motion.button>
-              )}
               <div className="between" style={{ padding: '4px 4px 0 14px' }}>
                 <span className="tiny faint">i · by itssinghankit</span>
                 <button className="close" onClick={() => setMenu(false)} aria-label="Close menu"><X size={22} /></button>
@@ -141,6 +143,7 @@ export default function App({ user = null, onSignOut = null }) {
         )}
       </AnimatePresence>
 
+      <Account open={accountOpen} onClose={() => setAccountOpen(false)} user={user} onSignOut={onSignOut} />
       <WeeklyHabitSheet open={weeklyOpen} onClose={() => setWeeklyOpen(false)} onChanged={refresh} toast={setToast} />
       <AddTodoSheet target={todoFor} onClose={() => setTodoFor(null)} onSaved={(d) => { setTodoFor(null); if (screen === 'home') setDate(d); refresh(); setToast('To-do added ✓'); }} />
       {toast}
@@ -148,21 +151,9 @@ export default function App({ user = null, onSignOut = null }) {
   );
 }
 
-// Slowly drifting colour blobs in the background.
+// Soft colour background (styles.css .blobs): painted once, no animation, smooth on phones.
 function Blobs() {
-  const blobs = [
-    { c: '#c4b5fd', x: [-80, -40, -80], y: [-120, -80, -120] },
-    { c: '#fbcfe8', x: [220, 180, 220], y: [-60, -100, -60] },
-    { c: '#fed7aa', x: [160, 220, 160], y: [520, 470, 520] },
-    { c: '#a5f3fc', x: [-120, -60, -120], y: [380, 440, 380] },
-  ];
-  return (
-    <div className="blobs">
-      {blobs.map((b, i) => (
-        <motion.div key={i} className="blob" style={{ background: b.c }} animate={{ x: b.x, y: b.y }} transition={{ repeat: Infinity, duration: 14 + i * 3, ease: 'easeInOut' }} />
-      ))}
-    </div>
-  );
+  return <div className="blobs" />;
 }
 
 // Habit of the week: one new habit to practise for 7 days, then graduate into the routine.

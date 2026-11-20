@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { MotionConfig, motion } from 'framer-motion';
+import { MotionConfig, LazyMotion, m as motion } from 'framer-motion';
 import App from './App';
 import Login from './screens/Login';
 import { api, auth } from './api';
 import { AppMark } from './ui';
 import './styles.css';
+
+const loadMotion = () => import('./motionFeatures.js').catch(() => import('./motionFeatures.js')).then((r) => r.default);
+// Start fetching the engine immediately, in parallel with the first screen.
+loadMotion();
 
 // Decides what to show: the sign-in screen or the app.
 //   1. Ask the server whether sign-in is on (GET /auth/config).
@@ -47,7 +51,7 @@ function Gate() {
   if (state.phase === 'loading') {
     return (
       <div className="frame" style={{ display: 'grid', placeItems: 'center' }}>
-        <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ repeat: Infinity, duration: 1.2 }}><AppMark size={72} /></motion.div>
+        <div className="pulse"><AppMark size={72} /></div>
       </div>
     );
   }
@@ -60,7 +64,10 @@ function Gate() {
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <MotionConfig reducedMotion="user">
-      <Gate />
+      {/* Animations use the light "m" components; the engine arrives a moment later (retries once). */}
+      <LazyMotion features={loadMotion}>
+        <Gate />
+      </LazyMotion>
     </MotionConfig>
   </React.StrictMode>,
 );

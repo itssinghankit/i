@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { api, auth } from '../api';
 import { AppMark } from '../ui';
 
@@ -25,6 +25,9 @@ export default function Login({ clientId, onSignedIn }) {
     } finally { setBusy(false); }
   };
 
+  // Dark sign-in screen → white status bar icons (Android app only). The main app switches them back.
+  useEffect(() => { window.Android?.setLightBars?.(false); return () => window.Android?.setLightBars?.(true); }, []);
+
   useEffect(() => {
     // Android hands the Google token back through these two functions.
     window.onNativeGoogleCredential = (credential) => finish(credential);
@@ -49,8 +52,8 @@ export default function Login({ clientId, onSignedIn }) {
   return (
     <div className="frame login">
       <div className="login-bg" />
-      <motion.div className="login-orb a" animate={{ x: [0, 30, 0], y: [0, 20, 0] }} transition={{ repeat: Infinity, duration: 9 }} />
-      <motion.div className="login-orb b" animate={{ x: [0, -25, 0], y: [0, -30, 0] }} transition={{ repeat: Infinity, duration: 11 }} />
+      <div className="login-orb a" />
+      <div className="login-orb b" />
 
       <div className="login-body">
         <motion.div initial={{ scale: 0.5, opacity: 0, rotate: -12 }} animate={{ scale: 1, opacity: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 220, damping: 16 }}>

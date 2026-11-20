@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Plus, Trash2, ArrowLeftRight, Star, Target } from 'lucide-react';
 import { api, todayKey, buzz } from '../api';
 import { Check, Ring, Counter, Segmented, Sheet, Empty, listParent, listChild, EMOJIS, soft, TimePicker } from '../ui';
@@ -50,7 +50,7 @@ export function Resolutions() {
         <motion.div key={year} className="card list" variants={listParent} initial="hidden" animate="show">
           <AnimatePresence initial={false}>
             {rows.map((r) => (
-              <motion.div key={r._id} className="item" variants={listChild} layout exit={{ opacity: 0, x: -40 }} onClick={() => toggle(r)}>
+              <motion.div key={r._id} className="item" variants={listChild} exit={{ opacity: 0, x: -40 }} onClick={() => toggle(r)}>
                 <Check done={r.done} color="#7c3aed" onToggle={() => toggle(r)} />
                 <span style={{ fontSize: 20 }}>{r.emoji}</span>
                 <div className={`title ${r.done ? 'done' : ''}`} style={{ flex: 1 }}>{r.title}</div>
@@ -104,7 +104,7 @@ export function NeedsWants() {
         <motion.div key={type} className="card list" variants={listParent} initial="hidden" animate="show">
           <AnimatePresence initial={false}>
             {list.map((r) => (
-              <motion.div key={r._id} className="item" variants={listChild} layout exit={{ opacity: 0, x: type === 'need' ? 60 : -60 }}>
+              <motion.div key={r._id} className="item" variants={listChild} exit={{ opacity: 0, x: type === 'need' ? 60 : -60 }}>
                 <Check done={r.done} color={type === 'need' ? '#0ea5e9' : '#ec4899'} onToggle={() => patch(r, { done: !r.done })} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className={`title ${r.done ? 'done' : ''}`}>{r.title}</div>
@@ -161,7 +161,7 @@ export function WantToBe({ onChanged }) {
       {rows.length === 0 && <Empty emoji="🌟" text="Add who you want to become." />}
       <motion.div variants={listParent} initial="hidden" animate="show" style={{ display: 'grid', gap: 12, marginTop: 10 }}>
         {rows.map((r, i) => (
-          <motion.div key={r._id} variants={listChild} layout className="habit" style={{ background: grads[i % grads.length], minHeight: 0, outline: r.active ? '3px solid #16151d' : 'none', outlineOffset: 3 }}>
+          <motion.div key={r._id} variants={listChild} className="habit" style={{ background: grads[i % grads.length], minHeight: 0, outline: r.active ? '3px solid #16151d' : 'none', outlineOffset: 3 }}>
             <div className="shine" />
             <div className="between" style={{ alignItems: 'flex-start' }}>
               <div>

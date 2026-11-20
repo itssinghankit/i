@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence, animate, useMotionValue, useTransform } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import { X, Pencil, Minus, Plus } from 'lucide-react';
 import { buzz } from './api';
 
@@ -40,12 +40,25 @@ export function Check({ done, color = '#7c3aed', onToggle, size = 28 }) {
   );
 }
 
-// Number that counts up/down smoothly.
+// Number that counts up/down smoothly (tiny hand-made tween, so the full animation engine isn't needed).
 export function Counter({ value, suffix = '' }) {
-  const mv = useMotionValue(0);
-  const rounded = useTransform(mv, (v) => `${Math.round(v)}${suffix}`);
-  useEffect(() => { const c = animate(mv, value, { duration: 0.9, ease: [0.16, 1, 0.3, 1] }); return c.stop; }, [value]);
-  return <motion.span>{rounded}</motion.span>;
+  const [shown, setShown] = useState(0);
+  const from = useRef(0);
+  useEffect(() => {
+    const start = performance.now(), a = from.current, b = value, dur = 900;
+    let raf;
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out
+      const v = a + (b - a) * eased;
+      from.current = v;
+      setShown(Math.round(v));
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <span>{shown}{suffix}</span>;
 }
 
 // Progress ring with a rainbow gradient stroke.
@@ -128,7 +141,7 @@ export const listChild = {
 export function Empty({ emoji, text }) {
   return (
     <motion.div className="empty" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-      <motion.div className="big" animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 2.4 }}>{emoji}</motion.div>
+      <div className="big bob">{emoji}</div>
       {text}
     </motion.div>
   );
