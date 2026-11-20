@@ -64,8 +64,10 @@ dependencies {
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.webkit:webkit:1.12.1")
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    // MVVM: ViewModel + lifecycle-aware coroutines, and `by viewModels {}` in the Activity
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.activity:activity-ktx:1.9.3")
     // Google sign-in through Android's Credential Manager (the native account sheet)
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")

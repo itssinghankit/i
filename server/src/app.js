@@ -13,6 +13,7 @@ import { todosModule, resolutionsModule, needsWantsModule, routineModule, wantTo
 import { weeklyHabitsModule } from './modules/weeklyHabits.js';
 import { insightsModule } from './modules/insights.js';
 import { widgetModule } from './modules/widget.js';
+import { learnCategoriesModule, learningsModule } from './modules/learnings.js';
 import { authModule, requireUser } from './modules/auth.js';
 import { scopedStore } from './db/scoped.js';
 import { googleVerifier } from './auth/google.js';
@@ -29,6 +30,8 @@ const MODULES = [
   ['/weeklyHabits', weeklyHabitsModule],
   ['/insights', insightsModule],
   ['/widget', widgetModule],
+  ['/learnCategories', learnCategoriesModule],
+  ['/learnings', learningsModule],
 ];
 
 // options.verifyGoogleToken lets tests replace the real Google check.
@@ -66,6 +69,11 @@ export function createApp(baseStore, options = {}) {
     app.get(/^(?!\/api).*/, (req, res) => res.sendFile(path.join(dist, 'index.html')));
   }
 
-  app.use((err, req, res, _next) => { console.error(err); res.status(500).json({ error: err.message }); });
+  // Errors with a status (e.g. 400 'category not found') keep it; anything else is a 500.
+  app.use((err, req, res, _next) => {
+    const status = err.status && err.status < 500 ? err.status : 500;
+    if (status === 500) console.error(err);
+    res.status(status).json({ error: err.message });
+  });
   return app;
 }

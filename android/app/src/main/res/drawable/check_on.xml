@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Filled check circle; tinted with the item's colour when done. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
-    <solid android:color="#7C3AED" />
+    <solid android:color="#FFFFFFFF" />
 </shape>

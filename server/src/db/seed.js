@@ -80,6 +80,18 @@ export async function seedIfEmpty(store, force = false) {
     ['want', 'Trip to Japan', 'Cherry blossom season', 180000, false], ['want', 'Mechanical keyboard', '', 9000, false],
   ];
   for (const [type, title, note, price, done] of nw) await store.insert('needsWants', { type, title, note, price, done });
+  // Learnings: a few categories with notes
+  const cats = [
+    ['Life', '🌱', '#22c55e', [['Small steps beat big plans', 'Doing 10 minutes daily beats a perfect plan I never start.'], ['Sleep is a superpower', 'Everything feels harder after a bad night. Protect bedtime.']]],
+    ['Communication', '🗣️', '#6366f1', [['Listen to understand', 'Repeat back what you heard before replying.'], ['Say no kindly', 'A clear no is kinder than a vague maybe.']]],
+    ['Music', '🎸', '#ec4899', [['Practice slowly', 'Play it slow and clean first; speed comes later.']]],
+  ];
+  for (const [i, [title, emoji, color, items]] of cats.entries()) {
+    const c = await store.insert('learnCategories', { title, emoji, color, order: i, createdAt: Date.now() });
+    for (const [j, [lt, desc]] of items.entries()) {
+      await store.insert('learnings', { title: lt, description: desc, categoryId: c._id, order: j, date: addDays(t, -(j * 3 + i)), createdAt: Date.now() - (j + i) * 86400000 });
+    }
+  }
   return true;
 }
 

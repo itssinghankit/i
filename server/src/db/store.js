@@ -91,13 +91,15 @@ class MongoStore {
       this.c('weeklyHabits').createIndex({ userId: 1, weekStart: 1 }, { unique: true }),
       this.c('resolutions').createIndex({ userId: 1, year: 1 }),
       this.c('routine').createIndex({ userId: 1 }),
+      this.c('learnings').createIndex({ userId: 1, categoryId: 1, order: 1 }),
+      this.c('learnCategories').createIndex({ userId: 1, order: 1 }),
       this.c('users').createIndex({ googleSub: 1 }, { unique: true }),
     ]);
   }
 }
 
 // Collections that hold one person's data. "users" is shared and never scoped.
-export const COLLECTIONS = ['routine', 'days', 'todos', 'weeklyHabits', 'wantToBe', 'resolutions', 'needsWants', 'settings'];
+export const COLLECTIONS = ['routine', 'days', 'todos', 'weeklyHabits', 'wantToBe', 'resolutions', 'needsWants', 'settings', 'learnCategories', 'learnings'];
 
 // One shared store per process. On Vercel a warm function reuses it, so it doesn't reconnect on every request.
 let storePromise = null;

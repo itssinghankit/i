@@ -11,8 +11,8 @@ export function widgetModule({ store, progress }) {
     res.json({
       date,
       percent: progress.pctFor(day, routine),
-      routine: routine.map((x) => ({ id: x._id, title: x.title, emoji: x.emoji, minutes: x.minutes, done: day.routineDone.includes(x._id) })),
-      todos: todos.map((x) => ({ id: x._id, title: x.title, done: x.done })),
+      routine: routine.map((x) => ({ id: x._id, title: x.title, emoji: x.emoji, minutes: x.minutes, color: x.color, done: day.routineDone.includes(x._id) })),
+      todos: todos.map((x) => ({ id: x._id, title: x.title, minutes: x.minutes || 0, done: x.done })),
     });
   }));
   return r;

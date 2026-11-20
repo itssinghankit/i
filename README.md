@@ -16,10 +16,15 @@
 
 ## Screens
 
-| Home | To-do | Routine (per weekday) | Week chart | Sign in |
-|:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/home.jpg" width="170" /> | <img src="docs/screenshots/todo.jpg" width="170" /> | <img src="docs/screenshots/routine.jpg" width="170" /> | <img src="docs/screenshots/week-chart.jpg" width="170" /> | <img src="docs/screenshots/login.jpg" width="170" /> |
-| Date bar, 2 habit cards, progress ring, **Day plan** (does it all fit in a day?) | Office tasks sit **inside** Office work (no extra time); others add their own time | Each weekday has its own routine, total hours per day, sleep setting | % of routine done per day, ‹ › to change week | Sign in with Google; each account has its own data |
+| Today | To-do | Routine (per weekday) | Week chart |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/today.jpg" width="190" /> | <img src="docs/screenshots/todo.jpg" width="190" /> | <img src="docs/screenshots/routine.jpg" width="190" /> | <img src="docs/screenshots/week-chart.jpg" width="190" /> |
+| Habit cards, progress ring, **Day plan** (does it all fit in a day?) | Office tasks sit **inside** Office work; others add their own time | Each weekday has its own routine and total hours | % of routine done per day, ‹ › to change week |
+
+| Learnings | A learning | Goals | Home-screen widget |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/learnings.jpg" width="190" /> | <img src="docs/screenshots/learning-detail.jpg" width="190" /> | <img src="docs/screenshots/goals.jpg" width="190" /> | <img src="docs/screenshots/widget.jpg" width="190" /> |
+| Titles only, grouped by **your own categories**; drag ⋮⋮ to reorder | Tap a title: category, day it was added, the full note | Resolutions per year | Routine / To-do tabs, today's %, rows in each item's colour; tap a row to tick it |
 
 ## What it does
 
@@ -30,14 +35,27 @@
 | **Day plan**: routine + habits + to-dos vs. waking hours | Today |
 | To-dos, optionally **inside** a fixed-time item like Office work | Today → To-do → + |
 | Habit of the week, "graduates" into the routine after 5/7 days | 🌱 button |
+| **Learnings**: what life taught you, in categories (Life, Communication, Music 🎸…) | Learn tab |
 | Who I want to be + its daily habit (shown on Home) | More → Who I want to be |
 | Resolutions per year, Needs vs Wants (with ₹ totals) | Goals tab, More |
 | Week chart and colour-coded calendar | 📊 button, 📅 button |
 | **Insights**: the app reads your last 14 days and suggests changes | More → Insights |
-| Resizable home-screen widget (tick items, + to add a to-do) | Android home screen |
-| Google sign-in, private data per account | First screen |
+| Resizable home-screen widget: today's %, coloured routine rows, tick from the home screen | Android home screen |
+| Emoji and music icons (🎵 🎸 🎹 🥁 🎧 …) for routine items and categories | Any emoji picker |
 
----
+### Learnings
+
+```mermaid
+flowchart LR
+    T["Learn tab<br/>titles only, grouped by category"] -- "tap a title" --> D["Detail sheet<br/>category · added on · description"]
+    T -- "drag ⋮⋮" --> R["New order inside that category<br/>POST /learnings/reorder"]
+    T -- "Categories" --> C["Add / rename / reorder / delete<br/>categories, pick emoji + colour"]
+    D -- "Edit" --> E["Change title, text, category"]
+```
+
+- A learning has a **title**, a **description**, a **category** and the **day it was added** (set by the server).
+- Order is kept **per category**: dragging can't move a learning into another category by mistake.
+- Deleting a category asks first, then deletes its learnings too.
 
 ## How it fits together
 
@@ -55,7 +73,6 @@ flowchart LR
         API["Server /api/v1<br/>api/index.js → server/src"]
     end
     DB[("🍃 MongoDB Atlas<br/>Cluster0 · Mumbai<br/>db: i_app")]
-    G["Google<br/>sign-in"]
     GH["GitHub<br/>Releases (APK)"]
 
     APP -- "loads" --> UI
@@ -63,12 +80,10 @@ flowchart LR
     UI -- "fetch + login token" --> API
     W -- "GET /widget + token" --> API
     API --> DB
-    APP -. "Google account sheet" .-> G
-    WEB -. "Google button" .-> G
     APP -. "is there a newer APK?" .-> GH
 ```
 
-- **The phone app is a thin shell:** it shows the website inside the app (a WebView), plus native parts: splash screen, widget, Google account sheet and update check.
+- **The phone app is a thin shell:** it shows the website inside the app (a WebView), plus native parts: splash screen, widget and update check.
 - **Most changes need no new APK:** push to GitHub, Vercel redeploys, and the phone shows the new screens on its next open.
 
 ### What happens when you open the app
@@ -92,35 +107,6 @@ sequenceDiagram
     A-->>You: Home screen (splash fades out)
 ```
 
-### How Google sign-in works
-
-Google doesn't allow its sign-in page inside an app's WebView. So the **website** uses Google's button, and the **Android app** uses the phone's own Google account sheet. Both end the same way.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor You
-    participant UI as App screens
-    participant N as Android (Credential Manager)
-    participant G as Google
-    participant S as Server /api/v1/auth
-    participant DB as Atlas
-    You->>UI: "Continue with Google"
-    alt In a browser
-        UI->>G: Google button (Google Identity Services)
-    else In the Android app
-        UI->>N: window.Android.googleSignIn()
-        N->>G: native account sheet
-    end
-    G-->>UI: Google ID token (made for our Web client ID)
-    UI->>S: POST /auth/google { credential }
-    S->>G: check token signature + audience
-    S->>DB: find or create user (first user also gets older data)
-    S-->>UI: our login token (180 days)
-    UI->>UI: save token (+ give it to the widget)
-    Note over UI,S: every later call sends "Authorization: Bearer <token>"
-```
-
 **Each person's data is kept apart automatically.** `server/src/db/scoped.js` adds the signed-in `userId` to every read and write, so feature code can't see another user's data by mistake. The tests check this.
 
 ---
@@ -129,40 +115,80 @@ sequenceDiagram
 
 ```
 i/
-├── web/                  React screens (Vite)
-│   ├── src/screens/      Home, Routine, Goals, Login
-│   ├── src/api.js        talks to /api/v1, keeps the login token
-│   └── public/icon.svg   app icon (also the browser-tab icon)
-├── server/               Node + Express
-│   ├── src/app.js        list of features → add one line per new feature
-│   ├── src/modules/      one file per feature (days, lists, insights, auth, widget…)
-│   ├── src/db/           storage (MongoDB or local file) + per-user scoping
-│   ├── src/auth/         Google token check, our login token
-│   └── test/             16 API tests (incl. two users kept apart)
-├── api/index.js          Vercel entry: runs the same Express app
-├── vercel.json           Vercel build + routing
-├── android/              WebView app, widget, splash, Google sign-in
-└── .github/workflows/    ci.yml (tests on every push), release.yml (APK on tags)
+├── web/src/                    React screens (Vite)
+│   ├── app/                    App shell (tabs, keep-alive screens), AuthGate
+│   ├── features/<feature>/     one folder per feature: today, routine, learnings, goals, habits, todos, account
+│   │   └── learnings/          api.js (calls) → useLearnings.js (state) → LearningsScreen / LearningSheet / …
+│   ├── components/             shared UI: Sheet, Check, Ring, ReorderRow, EmojiPicker, palette (colours, emoji, music icons)
+│   └── lib/                    api client + login token, dates, formatting, haptics
+├── server/                     Node + Express
+│   ├── src/app.js              list of features → add one line per new feature
+│   ├── src/modules/            one file per feature (days, lists, learnings, insights, auth, widget…)
+│   ├── src/db/                 storage (MongoDB or local file) + per-user scoping
+│   └── test/                   22 API tests (incl. two users kept apart)
+├── api/index.js                Vercel entry: runs the same Express app
+├── vercel.json                 Vercel build + routing
+├── android/                    Android app (MVVM, see below)
+└── .github/workflows/          ci.yml (tests on every push), release.yml (APK on tags)
+```
+
+### Android app: MVVM
+
+```mermaid
+flowchart TB
+    subgraph View["View (ui/main)"]
+        A["MainActivity<br/>WebView, splash, full screen"]
+        B["WebAppBridge<br/>window.Android.* for the page"]
+    end
+    VM["MainViewModel<br/>MainUiState: load · error · pageReady · update<br/>load watchdog (6 s, 2 reloads)"]
+    subgraph Data["Data (data/)"]
+        R1["SessionRepository"] --> S["SessionStore<br/>(login token)"]
+        R2["TodayRepository"] --> API["ApiClient<br/>/api/v1"]
+        R3["UpdateRepository"] --> GH["ReleasesApi<br/>GitHub"]
+    end
+    WG["Widget<br/>TodayWidgetProvider + Service"]
+    DI["di/AppContainer<br/>creates everything once"]
+
+    A -- "events" --> VM
+    VM -- "state (StateFlow)" --> A
+    B --> A
+    VM --> R1 & R3
+    WG --> R2
+    DI -.-> VM & WG
+```
+
+```
+android/app/src/main/java/com/itssinghankit/i/
+├── IApplication.kt             creates the AppContainer
+├── di/AppContainer.kt          manual dependency injection
+├── data/
+│   ├── model/                  TodaySnapshot, TodayItem, UpdateInfo
+│   ├── local/SessionStore.kt   login token for the widget
+│   ├── remote/                 ApiClient (server), ReleasesApi (GitHub)
+│   └── repository/             SessionRepository, TodayRepository, UpdateRepository
+├── ui/main/                    MainActivity (View), MainViewModel, WebAppBridge, LoadErrorPage
+├── auth/                       native account sheet (Credential Manager)
+└── widget/                     home-screen widget (uses TodayRepository)
 ```
 
 ---
 
 ## Run it on your Mac
 
-No database or Google setup needed: it runs on a local file with dummy data, and sign-in is off.
+No database needed: it runs on a local file with dummy data.
 
 ```bash
-cd /Users/mili/Data/MiliApps/i/web && npm install && npm run build
+cd i/web && npm install && npm run build
 ```
 
 ```bash
-cd /Users/mili/Data/MiliApps/i/server && npm install && npm start
+cd i/server && npm install && npm start
 ```
 
 Open http://localhost:4600. For live-reload while editing screens, run `npm run dev` in `web/` (http://localhost:5180).
 
 ```bash
-cd /Users/mili/Data/MiliApps/i && npm test
+cd i && npm test
 ```
 
 ### Dev vs. prod: where each build gets its data
@@ -170,7 +196,7 @@ cd /Users/mili/Data/MiliApps/i && npm test
 | What | Dev | Prod |
 |---|---|---|
 | Website | `npm start` → http://localhost:4600 | https://i-chi-amber.vercel.app |
-| Android app + widget | **debug** build → `I_DEV_URL` = `http://10.0.2.2:4600` (your Mac, seen from the emulator) | **release** build → `I_APP_URL` = `https://i-chi-amber.vercel.app` |
+| Android app + widget | **debug** build → `I_DEV_URL` = `http://localhost:4600` (your Mac, through `adb reverse` over USB) | **release** build → `I_APP_URL` = `https://i-chi-amber.vercel.app` |
 | Set in | `android/gradle.properties` | `android/gradle.properties` |
 | Database | local file `server/data/db.json` | MongoDB Atlas (`MONGODB_URI` on Vercel) |
 
@@ -183,7 +209,7 @@ buildTypes {
 }
 ```
 
-`MainActivity` (the WebView) and `WidgetApi` (the widget) both use `BuildConfig.APP_URL`. For a real phone on your Wi-Fi, set `I_DEV_URL` to your Mac's Wi-Fi address, e.g. `http://192.168.1.20:4600`.
+`AppContainer` hands `BuildConfig.APP_URL` to the WebView and to the widget's `ApiClient`. Every debug build runs `adb reverse tcp:4600 tcp:4600` first, so `localhost` on a USB phone reaches your Mac.
 
 ---
 
@@ -193,7 +219,7 @@ buildTypes {
 flowchart TD
     E["Edit code"] --> C["git commit"]
     C --> P["git push (master)"]
-    P --> CI["GitHub CI<br/>16 tests + APK build"]
+    P --> CI["GitHub CI<br/>22 tests + APK build"]
     P --> V["Vercel deploy<br/>screens + server together, ~20 s"]
     V --> L["Live for everyone.<br/>Phone shows it on next open"]
     C --> Q{"Changed android/?"}
@@ -207,18 +233,18 @@ flowchart TD
 ### Web + server (most changes)
 
 ```bash
-cd /Users/mili/Data/MiliApps/i && git add -A && git commit -m "What changed" && git push
+cd i && git add -A && git commit -m "What changed" && git push
 ```
 
 ### Android (widget, splash, icon, permissions, server address)
 
 ```bash
-cd /Users/mili/Data/MiliApps/i && git push && git tag v1.0.1 && git push origin v1.0.1
+cd i && git push && git tag v1.0.1 && git push origin v1.0.1
 ```
 
 | Part | What it does |
 |---|---|
-| `cd /Users/mili/Data/MiliApps/i` | go to the project folder |
+| `cd i` | go to the project folder |
 | `&&` | run the next part only if this one worked |
 | `git push` | send your latest commits to GitHub (Vercel deploys them) |
 | `git tag v1.0.1` | put a version label on your latest commit |
@@ -244,8 +270,7 @@ Rules: always go **up**, and use `vMAJOR.MINOR.PATCH` with each part below 100. 
 | Name | Needed | What |
 |---|---|---|
 | `MONGODB_URI` | ✅ | Atlas connection link (with password; `@` in the password written as `%40`) |
-| `GOOGLE_CLIENT_ID` | for sign-in | Google "Web application" client ID. Setting it turns sign-in on. |
-| `SESSION_SECRET` | with sign-in | Long random text that signs login tokens (32+ characters) |
+| `SESSION_SECRET` | ✅ | Long random text that signs login tokens (32+ characters) |
 | `APP_TZ` | no | Time zone for "today" (default `Asia/Kolkata`) |
 | `SEED_DEMO` / `ALLOW_RESET` | no | Dummy data / reset button (off on real databases) |
 
@@ -255,7 +280,6 @@ Rules: always go **up**, and use `vMAJOR.MINOR.PATCH` with each part below 100. 
 |---|---|
 | `I_APP_URL` | Release builds load this (Vercel) |
 | `I_DEV_URL` | Debug builds load this (your Mac) |
-| `I_GOOGLE_WEB_CLIENT_ID` | Same Web client ID as `GOOGLE_CLIENT_ID` |
 | `I_GITHUB_REPO` | Where the app checks for new APKs |
 
 ### GitHub → Settings → Secrets → Actions
@@ -263,28 +287,10 @@ Rules: always go **up**, and use `vMAJOR.MINOR.PATCH` with each part below 100. 
 
 ---
 
-## Turning on Google sign-in (one time, ~10 min)
-
-1. **Google Cloud Console** → create a project "i" → **APIs & Services → OAuth consent screen**: External, app name "i", your email. While it's in "Testing", add yourself (and friends) as **test users**.
-2. **Credentials → Create credentials → OAuth client ID → Web application**
-   - Authorized JavaScript origins: `https://i-chi-amber.vercel.app`, `http://localhost:4600`, `http://localhost:5180`
-   - Copy the **Client ID** (ends in `.apps.googleusercontent.com`).
-3. **Create another OAuth client → Android**, package `com.itssinghankit.i`, with the **SHA-1** of your release key:
-   ```bash
-   "/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin/keytool" -list -v -keystore ~/i-release.jks -alias i | grep SHA1
-   ```
-   (Optional: a second Android client with the debug key's SHA-1, for testing debug builds.)
-4. **Vercel → Environment Variables:** `GOOGLE_CLIENT_ID` = the Web client ID; `SESSION_SECRET` = the output of `openssl rand -hex 32`. Then **Redeploy**.
-5. **`android/gradle.properties`:** `I_GOOGLE_WEB_CLIENT_ID=` the Web client ID → push → tag a new version.
-
-The first person to sign in gets the data saved before sign-in existed. Everyone after starts empty.
-
----
-
 ## Adding a feature
 
-1. **Simple list** (e.g. "Books"): add a `crudRouter(store, 'books', { fields: [...] })` in `server/src/modules/lists.js`, add one line to `MODULES` in `server/src/app.js`, and add `'books'` to `COLLECTIONS` in `server/src/db/store.js` (so it's private per user).
-2. **Screen:** a new file in `web/src/screens/` plus an entry in the `MORE` menu in `web/src/App.jsx`.
+1. **Server:** a new file in `server/src/modules/` (a `crudRouter(store, 'books', { fields: [...] })` covers list/add/edit/delete), one line in `MODULES` in `server/src/app.js`, and `'books'` in `COLLECTIONS` in `server/src/db/store.js` (so it's private per user). Add a test in `server/test/`.
+2. **Screen:** a folder `web/src/features/books/` with `api.js` (calls), a `useBooks.js` hook (state) and the screen; then a tab in `TABS` or an entry in the More menu in `web/src/app/App.jsx`. Copy `features/learnings/` as the template.
 3. **New insight:** one function in `RULES` in `server/src/modules/insights.js`.
 4. **Breaking API change:** add `/api/v2` next to `/api/v1`, so older APKs keep working.
 
@@ -293,7 +299,5 @@ The first person to sign in gets the data saved before sign-in existed. Everyone
 | You see | Why | Fix |
 |---|---|---|
 | `{"error":"database not reachable"}` | Wrong `MONGODB_URI` or Atlas network access | Check the link (one `@`), Atlas → Network Access has `0.0.0.0/0` |
-| Sign-in screen says "isn't set up" | `GOOGLE_CLIENT_ID` missing on the server | Add it on Vercel and redeploy |
-| Android: "Google sign-in failed" | Android OAuth client missing or wrong SHA-1 | Step 3 above |
-| Widget: "Open i and sign in" | No login saved on the phone | Open the app and sign in once |
+| Widget: "Sign in to see your day" | No login saved on the phone | Open the app and sign in once |
 | APK won't install over the old one | Signed with a different key | Always build through `release.yml` with the same key |

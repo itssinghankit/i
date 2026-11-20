@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Friendly message row: signed out, offline, or nothing planned. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:gravity="center" android:orientation="vertical" android:padding="18dp">
+    <TextView android:id="@+id/msg_emoji"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="28sp" />
+    <TextView android:id="@+id/msg_text"
+        android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+        android:gravity="center" android:textColor="@color/ink3" android:textSize="13sp" />
+</LinearLayout>
