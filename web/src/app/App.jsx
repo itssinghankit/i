@@ -28,11 +28,12 @@ const MORE = [
   { id: 'wantToBe', label: 'Who I want to be', icon: Rocket },
   { id: 'insights', label: 'Insights', icon: Lightbulb },
 ];
-// Today keeps its own graphics layer and is only made invisible on other tabs,
-// so switching back needs no repaint (just shows the already-painted layer).
-const HOME_SHOWN = { willChange: 'opacity', opacity: 1, zIndex: 2 };
+// Hidden tabs stay alive (state, data, scroll position kept) but the browser skips drawing them
+// (content-visibility: hidden). Before, every visited tab was its own GPU layer (will-change), and a
+// theme switch repainted all of them at once: the phone ran out of graphics memory and froze.
+const HOME_SHOWN = { zIndex: 2 };
 // (The visible screen sits on top and covers the whole area, so hidden ones never get taps.)
-const HOME_HIDDEN = { willChange: 'opacity', opacity: 0, zIndex: 0 };
+const HOME_HIDDEN = { zIndex: 0, contentVisibility: 'hidden' };
 const SCREEN_SHOWN = HOME_SHOWN;
 const SCREEN_HIDDEN = HOME_HIDDEN;
 const OTHER_SCREENS = ['routine', 'learnings', 'resolutions', 'needs', 'wantToBe', 'insights'];
