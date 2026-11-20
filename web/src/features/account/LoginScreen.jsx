@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { m as motion } from 'framer-motion';
-import { api, auth } from '../../lib';
+import { api, auth, applyTheme } from '../../lib';
 import { AppMark } from '../../components';
 
 // Sign-in screen.
@@ -26,7 +26,7 @@ export default function Login({ clientId, onSignedIn }) {
   };
 
   // Dark sign-in screen → white status bar icons (Android app only). The main app switches them back.
-  useEffect(() => { window.Android?.setLightBars?.(false); return () => window.Android?.setLightBars?.(true); }, []);
+  useEffect(() => { window.Android?.setLightBars?.(false); return () => applyTheme(); }, []);
 
   useEffect(() => {
     // Android hands the Google token back through these two functions.

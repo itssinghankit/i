@@ -8,7 +8,8 @@
         <item name="postSplashScreenTheme">@style/Theme.I</item>
     </style>
 
-    <style name="Theme.I" parent="Theme.AppCompat.Light.NoActionBar">
+    <!-- DayNight: the WebView then reports the phone's dark mode to the page (prefers-color-scheme) -->
+    <style name="Theme.I" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
         <item name="colorPrimary">@color/violet</item>
         <item name="colorAccent">@color/violet</item>

@@ -27,6 +27,7 @@ class TodayWidgetService : RemoteViewsService() {
             data class Message(val emoji: String, val text: String) : Line()
         }
         private var lines: List<Line> = emptyList()
+        private var theme = WidgetTheme(context)
         private var date = ""
 
         override fun onCreate() {}
@@ -38,6 +39,7 @@ class TodayWidgetService : RemoteViewsService() {
         override fun getLoadingView(): RemoteViews? = null
 
         override fun onDataSetChanged() {
+            theme = WidgetTheme(context)   // the light / dark choice may have changed
             lines = try {
                 val t = context.container.todayRepository.today()
                 date = t.date
@@ -67,6 +69,7 @@ class TodayWidgetService : RemoteViewsService() {
             is Line.Message -> RemoteViews(context.packageName, R.layout.widget_message_row).apply {
                 setTextViewText(R.id.msg_emoji, line.emoji)
                 setTextViewText(R.id.msg_text, line.text)
+                theme.ink3(this, R.id.msg_text)
             }
             is Line.Item -> itemRow(line.item)
         }
@@ -84,15 +87,18 @@ class TodayWidgetService : RemoteViewsService() {
                 if (r.done) setSpan(StrikethroughSpan(), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             setTextViewText(R.id.item_title, title)
-            setTextColor(R.id.item_title, if (r.done) Color.parseColor("#9A98A8") else Color.parseColor("#16151D"))
+            if (r.done) theme.ink3(this, R.id.item_title) else theme.ink(this, R.id.item_title)
 
             if (r.minutes > 0) {
                 setViewVisibility(R.id.item_time, View.VISIBLE)
                 setTextViewText(R.id.item_time, mins(r.minutes))
+                theme.background(this, R.id.item_time, theme.chipBg)
+                theme.chipInk(this, R.id.item_time)
             } else setViewVisibility(R.id.item_time, View.GONE)
 
             // Check: empty ring, or a filled circle in the item's colour with a white tick.
             setViewVisibility(R.id.item_check_ring, if (r.done) View.GONE else View.VISIBLE)
+            setImageViewResource(R.id.item_check_ring, theme.ring)
             setViewVisibility(R.id.item_check_fill, if (r.done) View.VISIBLE else View.GONE)
             setViewVisibility(R.id.item_check_tick, if (r.done) View.VISIBLE else View.GONE)
             setInt(R.id.item_check_fill, "setColorFilter", color)

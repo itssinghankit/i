@@ -22,7 +22,7 @@ export default function DayBudget({ b }) {
           <div className="small muted" style={{ marginTop: 2 }}>{mins(b.plannedMinutes)} planned of {mins(b.awakeMinutes)} awake</div>
         </div>
         <motion.span key={String(b.fits)} initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={spring} className="time-chip"
-          style={{ fontSize: 13, padding: '6px 11px', background: b.fits ? '#dcfce7' : '#ffe4e6', color: b.fits ? '#15803d' : '#e11d48' }}>
+          style={{ fontSize: 13, padding: '6px 11px', background: b.fits ? 'var(--ok-bg)' : 'var(--bad-bg)', color: b.fits ? 'var(--ok)' : '#e11d48' }}>
           {b.fits ? `✓ ${mins(b.freeMinutes)} free` : `Over by ${mins(-b.freeMinutes)}`}
         </motion.span>
       </div>

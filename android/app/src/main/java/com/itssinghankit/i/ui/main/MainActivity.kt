@@ -4,6 +4,7 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
 import android.view.View
@@ -30,6 +31,7 @@ import com.itssinghankit.i.BuildConfig
 import com.itssinghankit.i.auth.GoogleSignInClient
 import com.itssinghankit.i.ui.update.UpdateSheet
 import com.itssinghankit.i.widget.TodayWidgetProvider
+import com.itssinghankit.i.widget.WidgetPrefs
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -70,6 +72,7 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
         }
         setupFullScreen(root)
         setContentView(root)
+        paintBackground()
         setLightBars(true)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -79,6 +82,11 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
         observeViewModel()
         vm.start(intent?.getStringExtra(EXTRA_ROUTE))
         if (BuildConfig.DEBUG && intent?.getBooleanExtra(EXTRA_PREVIEW_UPDATE, false) == true) vm.previewUpdate()
+        if (BuildConfig.DEBUG && intent?.getBooleanExtra(EXTRA_PIN_WIDGET, false) == true) {
+            // Debug: Android's own "Add widget to home screen?" prompt, to test the widget without the launcher's picker.
+            getSystemService(android.appwidget.AppWidgetManager::class.java).requestPinAppWidget(
+                android.content.ComponentName(this, TodayWidgetProvider::class.java), null, null)
+        }
     }
 
     // ---------- draw the ViewModel's state ----------
@@ -96,6 +104,9 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
                     }
                 }
                 launch {
+                    vm.routes.collect { web.evaluateJavascript("location.hash=${JSONObject.quote(it)}", null) }
+                }
+                launch {
                     // The ViewModel asks: has the page drawn yet? ("booted" = something inside #root)
                     vm.bootChecks.collect { id ->
                         web.evaluateJavascript("(function(){var r=document.getElementById('root');return !!(r&&r.childElementCount)})()") { v ->
@@ -108,8 +119,10 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
     }
 
     private inner class PageClient : WebViewClient() {
-        override fun onPageFinished(view: WebView, url: String) { pageUrl = url; vm.onPageFinished(); pushSafeArea() }
-        override fun onPageCommitVisible(view: WebView, url: String) { pushSafeArea() }
+        override fun onPageFinished(view: WebView, url: String) {
+            pageUrl = url; vm.onPageFinished(isAppPage = url.startsWith(BuildConfig.APP_URL)); pushSafeArea(); pushSystemDark()
+        }
+        override fun onPageCommitVisible(view: WebView, url: String) { pushSafeArea(); pushSystemDark() }
         override fun onReceivedError(view: WebView, req: WebResourceRequest, err: WebResourceError) {
             if (req.isForMainFrame) vm.onLoadFailed(req.url.toString(), err.description?.toString() ?: "Network error")
         }
@@ -125,7 +138,7 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent.getStringExtra(EXTRA_ROUTE)?.let { web.evaluateJavascript("location.hash=${JSONObject.quote(it)}", null) }
+        intent.getStringExtra(EXTRA_ROUTE)?.let { vm.openRoute(it) }
     }
 
     override fun onResume() {
@@ -140,14 +153,17 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
         // Stays up until the page has loaded (max 3 s), so you never see a blank screen.
         splash.setKeepOnScreenCondition { !vm.state.value.pageReady && System.currentTimeMillis() - started < SPLASH_MAX_MS }
         splash.setOnExitAnimationListener { view ->
-            val icon = view.iconView
+            // Opened from the widget (not the app icon), Android shows the splash WITHOUT an icon,
+            // and iconView throws. Then only fade the background out. (This crash made widget taps close the app.)
+            val icon = runCatching { view.iconView }.getOrNull()
             AnimatorSet().apply {
-                playTogether(
+                val fades = mutableListOf(ObjectAnimator.ofFloat(view.view, View.ALPHA, 1f, 0f))
+                if (icon != null) fades += listOf(
                     ObjectAnimator.ofFloat(icon, View.SCALE_X, 1f, 1.6f),
                     ObjectAnimator.ofFloat(icon, View.SCALE_Y, 1f, 1.6f),
                     ObjectAnimator.ofFloat(icon, View.ALPHA, 1f, 0f),
-                    ObjectAnimator.ofFloat(view.view, View.ALPHA, 1f, 0f),
                 )
+                playTogether(fades.toList())
                 interpolator = AnticipateInterpolator(1.2f)
                 duration = 420
                 doOnEnd { view.remove(); setLightBars(true) } // the splash leaves white icons behind
@@ -207,12 +223,41 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
     override fun googleSignOut() { lifecycleScope.launch { GoogleSignInClient.signOut(this@MainActivity) } }
     override fun saveSession(token: String) { vm.saveSession(token); refreshWidget() }
     override fun clearSession() { vm.clearSession(); refreshWidget() }
+    override fun saveThemeChoice(theme: String) {
+        if (WidgetPrefs.setTheme(this, theme)) TodayWidgetProvider.rebuildAll(this)
+        runOnUiThread { paintBackground() }
+    }
+
+    // ---------- light / dark ----------
+    private fun systemDark() =
+        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
+    /** Behind the page (seen for a moment while it loads): dark or light, matching the choice. */
+    private fun paintBackground() {
+        val t = WidgetPrefs.theme(this)
+        val dark = t == "dark" || (t == "system" && systemDark())
+        val c = if (dark) BG_DARK else BG
+        web.setBackgroundColor(c); root.setBackgroundColor(c)
+    }
+
+    /** Tells the page whether the phone is in dark mode (for "Auto"). */
+    private fun pushSystemDark() {
+        web.evaluateJavascript("window.__iSystemDark=${systemDark()};window.iSetSystemDark&&window.iSetSystemDark(${systemDark()})", null)
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        pushSystemDark(); paintBackground()
+    }
 
     companion object {
         const val EXTRA_ROUTE = "route"
         /** Debug builds only: `adb shell am start -n com.itssinghankit.i/.MainActivity --ez preview_update true` shows the update sheet. */
         const val EXTRA_PREVIEW_UPDATE = "preview_update"
+        /** Debug builds only: `--ez pin_widget true` asks Android to add the widget to the home screen. */
+        const val EXTRA_PIN_WIDGET = "pin_widget"
         private const val SPLASH_MAX_MS = 3000L
         private val BG = Color.parseColor("#F7F6FC")
+        private val BG_DARK = Color.parseColor("#0F0E15")
     }
 }

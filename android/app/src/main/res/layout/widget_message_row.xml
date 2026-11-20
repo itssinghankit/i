@@ -7,5 +7,5 @@
         android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="28sp" />
     <TextView android:id="@+id/msg_text"
         android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp"
-        android:gravity="center" android:textColor="@color/ink3" android:textSize="13sp" />
+        android:gravity="center" android:textColor="@color/widget_ink3" android:textSize="13sp" />
 </LinearLayout>

@@ -20,7 +20,7 @@ export const Ring = memo(function Ring({ percent, size = 92, stroke = 10, childr
             <stop offset="0%" stopColor="#7c3aed" /><stop offset="55%" stopColor="#ec4899" /><stop offset="100%" stopColor="#f97316" />
           </linearGradient>
         </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="#efedf6" strokeWidth={stroke} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="#efedf6" className="ring-track" strokeWidth={stroke} fill="none" />
         <circle cx={size / 2} cy={size / 2} r={r} stroke={`url(#${id})`} strokeWidth={stroke} fill="none" strokeLinecap="round"
           strokeDasharray={c} strokeDashoffset={offset} style={{ transition: 'stroke-dashoffset 1s cubic-bezier(.16,1,.3,1)' }} />
       </svg>

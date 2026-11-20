@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_bg">#F51A1922</color>
+    <color name="widget_ink">#F2F1F8</color>
+    <color name="widget_ink3">#7E7C90</color>
+    <color name="widget_chip_bg">#3A2A66</color>
+    <color name="widget_chip_ink">#C4B5FD</color>
+    <color name="widget_ring">#4A4858</color>
+</resources>

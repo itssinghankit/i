@@ -52,6 +52,12 @@ class MainViewModel(
     private val _bootChecks = MutableSharedFlow<Long>(extraBufferCapacity = 4)
     val bootChecks: SharedFlow<Long> = _bootChecks
 
+    /** Routes for the page (e.g. "add-todo" from the widget's +). Sent only once the page has loaded. */
+    private val _routes = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val routes: SharedFlow<String> = _routes
+    private var appPageLoaded = false
+    private var pendingRoute: String? = null
+
     private var attempts = 0
     private var nextId = 1L
     private var watchdog: Job? = null
@@ -68,6 +74,7 @@ class MainViewModel(
     fun urlFor(route: String?) = if (route != null) "$baseUrl/#$route" else baseUrl
 
     private fun load(url: String) {
+        appPageLoaded = false
         attempts++
         val id = nextId++
         _state.value = _state.value.copy(load = LoadRequest(id, url), error = null)
@@ -90,7 +97,21 @@ class MainViewModel(
         else showError(current.url, "The app took too long to load.")
     }
 
-    fun onPageFinished() { _state.value = _state.value.copy(pageReady = true) }
+    /**
+     * The app's own page finished loading. A route that arrived earlier is sent now: when the app was closed,
+     * Android restarts it first and hands over the widget's request before the page exists, so it used to be lost.
+     */
+    fun onPageFinished(isAppPage: Boolean) {
+        _state.value = _state.value.copy(pageReady = true)
+        if (!isAppPage) return
+        appPageLoaded = true
+        pendingRoute?.let { pendingRoute = null; _routes.tryEmit(it) }
+    }
+
+    /** A widget tap while the app already exists (onNewIntent). */
+    fun openRoute(route: String) {
+        if (appPageLoaded) _routes.tryEmit(route) else pendingRoute = route
+    }
 
     fun onLoadFailed(url: String, reason: String) = showError(url, reason)
 

@@ -44,7 +44,7 @@ export function Resolutions() {
                 <Check done={r.done} color="#7c3aed" onToggle={() => toggle(r)} />
                 <span style={{ fontSize: 20 }}>{r.emoji}</span>
                 <div className={`title ${r.done ? 'done' : ''}`} style={{ flex: 1 }}>{r.title}</div>
-                <button onClick={(e) => { e.stopPropagation(); remove(r); }} aria-label="Delete"><Trash2 size={16} color="#c4c2d0" /></button>
+                <button onClick={(e) => { e.stopPropagation(); remove(r); }} aria-label="Delete"><Trash2 size={16} color="currentColor" className="ic-4" /></button>
               </motion.div>
             ))}
           </AnimatePresence>

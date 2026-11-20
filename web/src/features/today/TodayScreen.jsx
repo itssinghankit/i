@@ -184,7 +184,7 @@ export default memo(function Home({ date, setDate, refreshKey, openWeekly, openA
                 <motion.div key="t" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.18 }}>
                   <div className="between">
                     <div className="section-label">Just for {isToday ? 'today' : fmt(date, { day: 'numeric', month: 'short' })}</div>
-                    <motion.button whileTap={{ scale: 0.9 }} className="ghost-btn row" style={{ gap: 4, marginTop: 12, background: '#ede9fe', color: 'var(--violet)' }} onClick={() => openAddTodo({ date })}>
+                    <motion.button whileTap={{ scale: 0.9 }} className="ghost-btn row" style={{ gap: 4, marginTop: 12, background: 'var(--tint)', color: 'var(--violet)' }} onClick={() => openAddTodo({ date })}>
                       <Plus size={16} /> Add
                     </motion.button>
                   </div>
@@ -208,7 +208,7 @@ export default memo(function Home({ date, setDate, refreshKey, openWeekly, openA
                                     <div className="item" onClick={() => toggleTodo(t)}>
                                       <Check done={t.done} color={group?.color || '#22c55e'} onToggle={() => toggleTodo(t)} />
                                       <div className={`title ${t.done ? 'done' : ''}`} style={{ flex: 1 }}>{t.title}</div>
-                                      {!group && t.minutes > 0 && <span className="time-chip" style={{ background: '#dcfce7', color: '#15803d' }}>{mins(t.minutes)}</span>}
+                                      {!group && t.minutes > 0 && <span className="time-chip" style={{ background: 'var(--ok-bg)', color: 'var(--ok)' }}>{mins(t.minutes)}</span>}
                                     </div>
                                   </SwipeRow>
                                 ))}

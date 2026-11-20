@@ -91,7 +91,7 @@ export default function Routine({ onChanged, refreshKey }) {
             ))}
           </div>
           <div className="between" style={{ marginTop: 10 }}>
-            <span className="small bold" style={{ color: fits ? '#15803d' : '#e11d48' }}>
+            <span className="small bold" style={{ color: fits ? 'var(--ok)' : '#e11d48' }}>
               {fits ? `✓ Fits · ${mins(awake - total)} left of ${24 - sleep}h awake` : `Over by ${mins(total - awake)} — too much for one day`}
             </span>
           </div>
@@ -151,7 +151,7 @@ function RoutineEditor({ item, onClose, onSaved }) {
   };
   const remove = async () => { await api.del(`/routine/${item._id}`); onSaved(); };
   const toggleDay = (d) => setF((x) => ({ ...x, days: x.days.includes(d) ? x.days.filter((y) => y !== d) : [...x.days, d] }));
-  const on = { background: '#ede9fe', color: 'var(--violet)' };
+  const on = { background: 'var(--tint)', color: 'var(--violet)' };
 
   return (
     <Sheet open={!!item} onClose={onClose} title={isNew ? 'New routine item' : 'Edit routine item'}>

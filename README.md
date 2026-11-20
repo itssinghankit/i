@@ -42,6 +42,7 @@
 | **Insights**: the app reads your last 14 days and suggests changes | More → Insights |
 | Resizable home-screen widget: today's %, coloured routine rows, tick from the home screen | Android home screen |
 | Emoji and music icons (🎵 🎸 🎹 🥁 🎧 …) for routine items and categories | Any emoji picker |
+| **Light / dark mode** (Auto follows the phone); the widget follows it too | More → Account → Appearance |
 
 ### Learnings
 

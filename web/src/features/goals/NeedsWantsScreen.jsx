@@ -52,8 +52,8 @@ export function NeedsWants() {
                   <div className={`title ${r.done ? 'done' : ''}`}>{r.title}</div>
                   <div className="meta">{r.price ? money(Number(r.price)) : ''}{r.note ? ` · ${r.note}` : ''}</div>
                 </div>
-                <button title={`Move to ${type === 'need' ? 'wants' : 'needs'}`} onClick={() => patch(r, { type: type === 'need' ? 'want' : 'need' })}><ArrowLeftRight size={16} color="#a5a3b3" /></button>
-                <button onClick={() => remove(r)} aria-label="Delete"><Trash2 size={16} color="#c4c2d0" /></button>
+                <button title={`Move to ${type === 'need' ? 'wants' : 'needs'}`} onClick={() => patch(r, { type: type === 'need' ? 'want' : 'need' })}><ArrowLeftRight size={16} color="currentColor" className="ic-3" /></button>
+                <button onClick={() => remove(r)} aria-label="Delete"><Trash2 size={16} color="currentColor" className="ic-4" /></button>
               </motion.div>
             ))}
           </AnimatePresence>

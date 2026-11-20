@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import { Sun, Repeat, Flag, Ellipsis, BookOpen, Sprout, X, UserRound, ChevronRight, Scale, Rocket, Lightbulb, GraduationCap, RotateCcw } from 'lucide-react';
-import { api, todayKey, addDays, fmt, buzz, mins } from '../lib';
+import { api, todayKey, addDays, fmt, buzz, mins, applyTheme } from '../lib';
 import { Sheet, spring, soft, useToast, EMOJIS, TimePicker, EmojiPicker } from '../components';
 import Home from '../features/today/TodayScreen.jsx';
 import WeeklyHabitSheet from '../features/habits/WeeklyHabitSheet.jsx';
@@ -66,7 +66,7 @@ export default function App({ user = null, onSignOut = null }) {
     setScrolled((el?.scrollTop || 0) > 6);
   }, [screen]);
   useEffect(() => { api.get('/health').then((h) => setCanReset(!!h.canReset)).catch(() => {}); }, []);
-  useEffect(() => { window.Android?.setLightBars?.(true); }, []); // light app → dark status bar icons
+  useEffect(() => { applyTheme(); }, []); // status-bar icons + widget follow the light / dark choice
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   // Deep links from the Android widget: #add-todo opens the add sheet, #home goes to today.
@@ -156,19 +156,19 @@ export default function App({ user = null, onSignOut = null }) {
                   <div className="bold" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user ? user.name : 'Account'}</div>
                   <div className="tiny faint" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user ? user.email : 'Not signed in'}</div>
                 </div>
-                <ChevronRight size={18} color="#9a98a8" />
+                <ChevronRight size={18} color="currentColor" className="ic-3" />
               </button>
               {MORE.map((m, i) => (
                 <motion.button key={m.id} onClick={() => open(m.id)} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.04 * i }}>
-                  <m.icon size={21} strokeWidth={1.7} color="#5d5b6b" /> {m.label}
+                  <m.icon size={21} strokeWidth={1.7} color="currentColor" className="ic-2" /> {m.label}
                 </motion.button>
               ))}
               <motion.button onClick={() => { setMenu(false); setWeeklyOpen(true); }} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.12 }}>
-                <GraduationCap size={21} strokeWidth={1.7} color="#5d5b6b" /> Habit of the week
+                <GraduationCap size={21} strokeWidth={1.7} color="currentColor" className="ic-2" /> Habit of the week
               </motion.button>
 {canReset && (
               <motion.button onClick={async () => { await api.post('/reset'); setMenu(false); refresh(); setToast('Demo data restored'); open('home'); }} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.16 }}>
-                <RotateCcw size={21} strokeWidth={1.7} color="#5d5b6b" /> Reset demo data
+                <RotateCcw size={21} strokeWidth={1.7} color="currentColor" className="ic-2" /> Reset demo data
               </motion.button>
               )}
               <div className="between" style={{ padding: '4px 4px 0 14px' }}>

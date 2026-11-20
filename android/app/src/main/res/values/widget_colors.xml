@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget colours. values-night has the dark versions; used when the theme is "Auto" (follows the phone). -->
+<resources>
+    <color name="widget_bg">#F7FAF9FF</color>
+    <color name="widget_ink">#16151D</color>
+    <color name="widget_ink3">#9A98A8</color>
+    <color name="widget_chip_bg">#EDE9FE</color>
+    <color name="widget_chip_ink">#7C3AED</color>
+    <color name="widget_ring">#D8D6E3</color>
+</resources>

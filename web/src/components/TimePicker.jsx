@@ -14,7 +14,7 @@ export function TimePicker({ value, onChange, presets = [5, 10, 15, 30, 45, 60],
   const h = Math.floor((value || 0) / 60);
   const m = (value || 0) % 60;
   const set = (hh, mm) => onChange(Math.min(max, Math.max(1, hh * 60 + mm)));
-  const on = { background: '#ede9fe', color: 'var(--violet)' };
+  const on = { background: 'var(--tint)', color: 'var(--violet)' };
   const fmtM = (x) => (x >= 60 ? `${Math.floor(x / 60)}h${x % 60 ? ` ${x % 60}m` : ''}` : `${x}m`);
 
   return (

@@ -37,7 +37,7 @@ export default function CategoriesSheet({ open, onClose, store }) {
               {confirmId === c._id ? (
                 <button className="ghost-btn" style={{ background: '#e11d48', color: '#fff' }} onClick={() => { store.deleteCategory(c._id); setConfirmId(null); }}>Delete all</button>
               ) : (
-                <button onClick={() => setConfirmId(c._id)} aria-label={`Delete ${c.title}`}><Trash2 size={16} color="#c4c2d0" /></button>
+                <button onClick={() => setConfirmId(c._id)} aria-label={`Delete ${c.title}`}><Trash2 size={16} color="currentColor" className="ic-4" /></button>
               )}
             </ReorderRow>
           ))}

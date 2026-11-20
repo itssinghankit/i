@@ -62,7 +62,7 @@ export default function LearningsScreen({ refreshKey }) {
                 {list.map((l, i) => (
                   <ReorderRow key={l._id} value={l} className="item rise" style={{ '--i': i }} onDrop={() => store.saveOrderIn(c._id, byCategory.get(c._id) || [])}>
                     <button className="learning-title" onClick={() => setOpenId(l._id)}>{l.title}</button>
-                    <ChevronRight size={18} color="#c4c2d0" />
+                    <ChevronRight size={18} color="currentColor" className="ic-4" />
                   </ReorderRow>
                 ))}
               </Reorder.Group>

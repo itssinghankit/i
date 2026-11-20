@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.view.View
 import android.widget.RemoteViews
 import com.itssinghankit.i.R
 import com.itssinghankit.i.data.model.TodaySnapshot
@@ -20,7 +21,7 @@ import java.time.ZonedDateTime
 /**
  * Resizable home-screen widget.
  *  Header: [☀️ Routine 3/8 | ✅ To-do 4 left] [+], then today's progress bar and %.
- *          Tap a tab to switch (saved per widget in [WidgetPrefs]); "+" opens "add to-do" in the app.
+ *          Tap a tab to switch (saved per widget in [WidgetPrefs]); "+" (To-do tab only) opens "add to-do" in the app.
  *  Daily:  refreshes itself just after midnight, so a new day shows without opening the app.
  *  Body:   the chosen tab's rows (see [TodayWidgetService]). Tapping a row ticks / unticks it.
  * Data comes from [com.itssinghankit.i.data.repository.TodayRepository] (same server as the app).
@@ -91,6 +92,7 @@ class TodayWidgetProvider : AppWidgetProvider() {
             R.id.widget_list,
             PendingIntent.getBroadcast(context, 0, toggle, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE),
         )
+        WidgetTheme(context).let { it.background(views, R.id.widget_root, it.bg); it.ink3(views, R.id.widget_empty) }
         views.setOnClickPendingIntent(R.id.widget_tab_routine, tabIntent(context, widgetId, WidgetPrefs.ROUTINE))
         views.setOnClickPendingIntent(R.id.widget_tab_todo, tabIntent(context, widgetId, WidgetPrefs.TODO))
         styleTabs(views, WidgetPrefs.tab(context, widgetId))
@@ -141,6 +143,12 @@ class TodayWidgetProvider : AppWidgetProvider() {
         const val EXTRA_DONE = "done"
         private val INK = Color.parseColor("#16151D")
 
+        /** Rebuilds every placed widget from scratch (new colours after a light / dark change), then reloads the rows. */
+        fun rebuildAll(context: Context) {
+            val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, TodayWidgetProvider::class.java))
+            if (ids.isNotEmpty()) TodayWidgetProvider().onUpdate(context, AppWidgetManager.getInstance(context), ids)
+        }
+
         fun refreshAll(context: Context) {
             val m = AppWidgetManager.getInstance(context)
             val ids = m.getAppWidgetIds(ComponentName(context, TodayWidgetProvider::class.java))
@@ -155,6 +163,8 @@ class TodayWidgetProvider : AppWidgetProvider() {
             v.setInt(off, "setBackgroundResource", 0)
             v.setTextColor(on, INK)
             v.setTextColor(off, Color.WHITE)
+            // "+" adds a to-do, so it only shows on the To-do tab.
+            v.setViewVisibility(R.id.widget_add, if (tab == WidgetPrefs.TODO) View.VISIBLE else View.GONE)
         }
 
         /** Fills the tabs' counts and the % once the list has fresh data (called from the list's background thread). */

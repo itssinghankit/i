@@ -17,6 +17,7 @@ class WebAppBridge(private val host: Host) {
         fun googleSignOut()
         fun saveSession(token: String)
         fun clearSession()
+        fun saveThemeChoice(theme: String)
     }
 
     @JavascriptInterface fun appVersion(): String = BuildConfig.VERSION_NAME
@@ -31,4 +32,6 @@ class WebAppBridge(private val host: Host) {
     /** Saves the login token for the widget. */
     @JavascriptInterface fun setSession(token: String) { if (host.isTrustedPage()) host.saveSession(token) }
     @JavascriptInterface fun clearSession() = host.clearSession()
+    /** Light / dark choice from Account: "system", "light" or "dark". Repaints the widget and the app's background. */
+    @JavascriptInterface fun setTheme(theme: String) = host.saveThemeChoice(theme)
 }

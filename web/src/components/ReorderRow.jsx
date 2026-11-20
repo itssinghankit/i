@@ -11,7 +11,7 @@ export default function ReorderRow({ value, onDrop, className = 'item', style, c
     <Reorder.Item value={value} className={className} style={style} dragListener={false} dragControls={controls} onDragEnd={onDrop}
       whileDrag={{ scale: 1.03, boxShadow: '0 12px 30px rgba(0,0,0,.15)', zIndex: 5 }}>
       <span className="drag-handle" aria-label="Drag to reorder" onPointerDown={(e) => { buzz(8); controls.start(e); }}>
-        <GripVertical size={18} color="#a5a3b3" />
+        <GripVertical size={18} color="currentColor" className="ic-3" />
       </span>
       {children}
     </Reorder.Item>

@@ -31,7 +31,7 @@ export default function AddTodoSheet({ target, onClose, onSaved }) {
     buzz(20); onSaved(when);
   };
   const dates = target ? [[t, 'Today'], [addDays(t, 1), 'Tomorrow'], ...(target.date !== t && target.date !== addDays(t, 1) ? [[target.date, fmt(target.date, { day: 'numeric', month: 'short' })]] : [])] : [];
-  const on = { background: '#ede9fe', color: 'var(--violet)' };
+  const on = { background: 'var(--tint)', color: 'var(--violet)' };
   return (
     <Sheet open={!!target} onClose={onClose} title="New to-do">
       <form onSubmit={save}>

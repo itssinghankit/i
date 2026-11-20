@@ -68,7 +68,7 @@ function AddWantToBe({ open, onClose, onSaved }) {
       <label className="field-label">By the year</label>
       <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
         {[1, 2, 3, 5, 10].map((n) => (
-          <button key={n} className="ghost-btn" style={f.byYear === y + n ? { background: '#ede9fe', color: 'var(--violet)' } : undefined} onClick={() => setF({ ...f, byYear: y + n })}>{y + n}</button>
+          <button key={n} className="ghost-btn" style={f.byYear === y + n ? { background: 'var(--tint)', color: 'var(--violet)' } : undefined} onClick={() => setF({ ...f, byYear: y + n })}>{y + n}</button>
         ))}
       </div>
       <label className="field-label">Icon</label>

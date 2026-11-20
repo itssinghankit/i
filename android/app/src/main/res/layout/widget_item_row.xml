@@ -17,13 +17,13 @@
     <TextView android:id="@+id/item_title"
         android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
         android:layout_marginStart="12dp" android:maxLines="2" android:ellipsize="end"
-        android:textColor="@color/ink" android:textSize="14sp" />
+        android:textColor="@color/widget_ink" android:textSize="14sp" />
 
     <TextView android:id="@+id/item_time"
         android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp"
         android:background="@drawable/time_bg" android:paddingStart="8dp" android:paddingEnd="8dp"
         android:paddingTop="2dp" android:paddingBottom="2dp"
-        android:textColor="@color/violet" android:textSize="11sp" android:textStyle="bold" />
+        android:textColor="@color/widget_chip_ink" android:textSize="11sp" android:textStyle="bold" />
 
     <FrameLayout android:layout_width="24dp" android:layout_height="24dp" android:layout_marginStart="10dp">
         <ImageView android:id="@+id/item_check_ring"

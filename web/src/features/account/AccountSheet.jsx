@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
-import { LogOut, ShieldCheck, Smartphone, Globe, Info } from 'lucide-react';
-import { api } from '../../lib';
-import { Sheet } from '../../components';
+import { LogOut, ShieldCheck, Smartphone, Globe, Info, Sun, Moon, SunMoon } from 'lucide-react';
+import { api, getThemePref, setThemePref } from '../../lib';
+import { Sheet, Segmented } from '../../components';
 
 // Account: who is signed in, where the data lives, app version, and Sign out (with a confirm step).
 export default function Account({ open, onClose, user, onSignOut }) {
   const [confirm, setConfirm] = useState(false);
   const [health, setHealth] = useState(null);
+  const [theme, setTheme] = useState(getThemePref);
   useEffect(() => { if (open) { setConfirm(false); api.get('/health').then(setHealth).catch(() => setHealth(null)); } }, [open]);
 
   const inApp = typeof window !== 'undefined' && !!window.Android;
@@ -18,17 +19,28 @@ export default function Account({ open, onClose, user, onSignOut }) {
     <Sheet open={open} onClose={onClose} title="Account">
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '4px 0 18px' }}>
         {user?.picture
-          ? <img src={user.picture} alt="" referrerPolicy="no-referrer" style={{ width: 84, height: 84, borderRadius: '50%', objectFit: 'cover', boxShadow: '0 0 0 4px #fff, 0 0 0 6px #ede9fe' }} />
+          ? <img src={user.picture} alt="" referrerPolicy="no-referrer" style={{ width: 84, height: 84, borderRadius: '50%', objectFit: 'cover', boxShadow: '0 0 0 4px var(--surface), 0 0 0 6px var(--tint)' }} />
           : <div style={{ width: 84, height: 84, borderRadius: '50%', background: 'var(--grad)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 34, fontWeight: 800 }}>{user ? (user.name || '?')[0] : 'i'}</div>}
         <div className="bold" style={{ fontSize: 20, marginTop: 12 }}>{user ? user.name : 'Not signed in'}</div>
         <div className="small muted" style={{ marginTop: 2 }}>{user ? user.email : 'Sign-in is turned off on this server'}</div>
+      </div>
+
+      <div className="section-label" style={{ marginTop: 0 }}>Appearance</div>
+      <Segmented layoutId="theme-pill" value={theme} onChange={(v) => { setTheme(v); setThemePref(v); }}
+        options={[
+          { value: 'system', label: <span className="row" style={{ justifyContent: 'center', gap: 6 }}><SunMoon size={16} /> Auto</span> },
+          { value: 'light', label: <span className="row" style={{ justifyContent: 'center', gap: 6 }}><Sun size={16} /> Light</span> },
+          { value: 'dark', label: <span className="row" style={{ justifyContent: 'center', gap: 6 }}><Moon size={16} /> Dark</span> },
+        ]} />
+      <div className="tiny faint" style={{ textAlign: 'center', margin: '8px 0 18px' }}>
+        {inApp ? 'Also changes the home-screen widget. Auto follows your phone.' : 'Auto follows your device.'}
       </div>
 
       <div className="card list" style={{ boxShadow: 'none' }}>
         <Row icon={<ShieldCheck size={18} color="#16a34a" />} label="Signed in with" value={user ? 'Google' : '—'} />
         <Row icon={<Globe size={18} color="#6366f1" />} label="Your data" value={health?.store === 'mongodb' ? 'Private to this account (cloud)' : health ? 'This computer only (local)' : '…'} />
         <Row icon={<Smartphone size={18} color="#ec4899" />} label="App" value={inApp ? `Android ${appVersion ? 'v' + appVersion : ''}` : 'Website'} />
-        <Row icon={<Info size={18} color="#9a98a8" />} label="Made by" value="itssinghankit" />
+        <Row icon={<Info size={18} color="currentColor" className="ic-3" />} label="Made by" value="itssinghankit" />
       </div>
 
       {onSignOut && (
@@ -36,7 +48,7 @@ export default function Account({ open, onClose, user, onSignOut }) {
           {!confirm ? (
             <motion.button key="out" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} whileTap={{ scale: 0.97 }}
               onClick={() => setConfirm(true)}
-              style={{ marginTop: 18, width: '100%', height: 50, borderRadius: 16, background: '#fff1f2', color: '#e11d48', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              style={{ marginTop: 18, width: '100%', height: 50, borderRadius: 16, background: 'var(--bad-soft)', color: '#e11d48', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <LogOut size={18} /> Log out
             </motion.button>
           ) : (
