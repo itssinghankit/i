@@ -71,3 +71,22 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 }
+
+// ---- Debug builds reach your Mac's local server through USB ----
+// `adb reverse` makes "localhost:4600" on the phone/emulator point at your Mac's port 4600.
+// Runs before every debug build; if no device is plugged in it just prints a note.
+val adbReverseDevServer by tasks.registering {
+    doLast {
+        val port = Regex(":(\\d+)").find(prop("I_DEV_URL"))?.groupValues?.get(1) ?: "4600"
+        val adb = android.sdkDirectory.resolve("platform-tools/adb")
+        try {
+            val p = ProcessBuilder(adb.absolutePath, "reverse", "tcp:$port", "tcp:$port").redirectErrorStream(true).start()
+            val out = p.inputStream.bufferedReader().readText().trim()
+            if (p.waitFor() == 0) logger.lifecycle("adb reverse tcp:$port → your Mac: OK")
+            else logger.lifecycle("adb reverse skipped (no device connected?): $out")
+        } catch (e: Exception) {
+            logger.lifecycle("adb reverse skipped: ${e.message}")
+        }
+    }
+}
+tasks.matching { it.name == "preDebugBuild" }.configureEach { dependsOn(adbReverseDevServer) }

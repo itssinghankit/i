@@ -12,5 +12,10 @@
         <item name="android:windowBackground">@color/bg</item>
         <item name="colorPrimary">@color/violet</item>
         <item name="colorAccent">@color/violet</item>
+        <!-- dark clock/battery icons on the light app background -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
     </style>
 </resources>

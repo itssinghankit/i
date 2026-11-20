@@ -11,7 +11,10 @@ import android.os.SystemClock
 import android.view.View
 import android.view.animation.AnticipateInterpolator
 import android.webkit.JavascriptInterface
+import android.view.ViewGroup
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
@@ -19,7 +22,9 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -58,7 +63,14 @@ class MainActivity : AppCompatActivity() {
                 )
                 interpolator = AnticipateInterpolator(1.2f)
                 duration = 420
-                doOnEnd { view.remove() }
+                doOnEnd {
+                    view.remove()
+                    // The splash leaves white icons behind; switch back to dark icons for the light app.
+                    WindowCompat.getInsetsController(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = true
+                        isAppearanceLightNavigationBars = true
+                    }
+                }
                 start()
             }
         }
@@ -74,6 +86,17 @@ class MainActivity : AppCompatActivity() {
             addJavascriptInterface(Bridge(), "Android")
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView, url: String) { pageReady = true; pageUrl = url }
+
+                // The page itself couldn't load (no internet, server not running, wrong address).
+                override fun onReceivedError(view: WebView, req: WebResourceRequest, err: WebResourceError) {
+                    if (req.isForMainFrame) showLoadError(req.url.toString(), err.description?.toString() ?: "Network error")
+                }
+
+                // The server answered with an error (e.g. 404 or 500) for the page itself.
+                override fun onReceivedHttpError(view: WebView, req: WebResourceRequest, res: WebResourceResponse) {
+                    if (req.isForMainFrame && res.statusCode >= 400) showLoadError(req.url.toString(), "Server error ${res.statusCode}")
+                }
+
                 // Links to other sites open in the browser, not inside the app.
                 override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean {
                     if (req.url.toString().startsWith(BuildConfig.APP_URL)) return false
@@ -81,16 +104,30 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        setContentView(SwipeRefreshLayout(this).apply {
-            addView(web)
+        val root = SwipeRefreshLayout(this).apply {
+            addView(web, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             isEnabled = false // the app has its own gestures; pull-to-refresh is off by default
-        })
+            setBackgroundColor(Color.parseColor("#F7F6FC"))
+        }
+        // Android 15+ draws apps behind the status bar and gesture bar. Pad the app so nothing hides under them.
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            WindowInsetsCompat.CONSUMED
+        }
+        setContentView(root)
+        // Dark clock/battery icons on the app's light background (set after the splash theme is replaced).
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
 
         web.loadUrl(urlFor(intent))
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { if (web.canGoBack()) web.goBack() else finish() }
         })
-        UpdateChecker.check(this) { version, url -> showUpdate(version, url) }
+        // Only real releases ask "new version?"; debug builds from Android Studio don't.
+        if (!BuildConfig.DEBUG) UpdateChecker.check(this) { version, url -> showUpdate(version, url) }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -101,6 +138,40 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         web.evaluateJavascript("window.iRefresh && window.iRefresh()", null)
+    }
+
+    /**
+     * Instead of a blank white page, show what went wrong and a Retry button.
+     * Debug builds also say which server they tried, since they use your Mac (I_DEV_URL).
+     */
+    private fun showLoadError(url: String, reason: String) {
+        pageReady = true // let the splash go away so the message is visible
+        val esc = { s: String -> s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") }
+        val hint = if (BuildConfig.DEBUG)
+            "This is a <b>debug</b> build, so it loads your Mac's local server. Start it with <code>npm start</code> in the <code>server</code> folder, then tap Retry. (On a real phone, 10.0.2.2 doesn't work: set <code>I_DEV_URL</code> to your Mac's Wi-Fi address.)"
+        else "Check your internet connection and tap Retry."
+        val html = """
+            <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+              body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#F7F6FC;
+                   font-family:system-ui,sans-serif;color:#16151D;text-align:center}
+              .c{padding:28px;max-width:340px}
+              .logo{width:72px;height:72px;border-radius:22px;margin:0 auto 18px;background:linear-gradient(135deg,#7C3AED,#EC4899 55%,#F97316)}
+              h1{font-size:20px;margin:0 0 8px} p{font-size:14px;color:#5D5B6B;line-height:1.45;margin:6px 0}
+              code{background:#EEEDF4;padding:1px 5px;border-radius:5px;font-size:12px}
+              .u{font-size:12px;color:#9A98A8;word-break:break-all}
+              button{margin-top:18px;height:48px;width:100%;border:0;border-radius:14px;color:#fff;font-size:16px;font-weight:700;
+                     background:linear-gradient(135deg,#7C3AED,#EC4899 55%,#F97316)}
+            </style></head><body><div class="c">
+              <div class="logo"></div>
+              <h1>Can't open i right now</h1>
+              <p>${esc(reason)}</p>
+              <p>$hint</p>
+              <p class="u">${esc(url)}</p>
+              <button onclick="Android.retry()">Retry</button>
+            </div></body></html>
+        """.trimIndent()
+        runOnUiThread { web.loadDataWithBaseURL(null, html, "text/html", "utf-8", null) }
     }
 
     private fun urlFor(intent: Intent?): String {
@@ -129,6 +200,9 @@ class MainActivity : AppCompatActivity() {
     inner class Bridge {
         @JavascriptInterface fun refreshWidget() = TodayWidgetProvider.refreshAll(this@MainActivity)
         @JavascriptInterface fun appVersion(): String = BuildConfig.VERSION_NAME
+
+        /** "Retry" on the can't-load screen: load the app again. */
+        @JavascriptInterface fun retry() { runOnUiThread { web.loadUrl(urlFor(null)) } }
 
         /** Opens the Google account sheet; the result goes back to window.onNativeGoogleCredential / onNativeGoogleError. */
         @JavascriptInterface fun googleSignIn() {
