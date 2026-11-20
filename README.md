@@ -14,35 +14,80 @@
 
 ---
 
-## Screens
+## See it in action
 
-| Today | To-do | Routine (per weekday) | Week chart |
-|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/today.jpg" width="190" /> | <img src="docs/screenshots/todo.jpg" width="190" /> | <img src="docs/screenshots/routine.jpg" width="190" /> | <img src="docs/screenshots/week-chart.jpg" width="190" /> |
-| Habit cards, progress ring, **Day plan** (does it all fit in a day?) | Office tasks sit **inside** Office work; others add their own time | Each weekday has its own routine and total hours | % of routine done per day, ‹ › to change week |
+<div align="center">
 
-| Learnings | A learning | Goals | Home-screen widget |
-|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/learnings.jpg" width="190" /> | <img src="docs/screenshots/learning-detail.jpg" width="190" /> | <img src="docs/screenshots/goals.jpg" width="190" /> | <img src="docs/screenshots/widget.jpg" width="190" /> |
-| Titles only, grouped by **your own categories**; drag ⋮⋮ to reorder | Tap a title: category, day it was added, the full note | Resolutions per year | Routine / To-do tabs, today's %, rows in each item's colour; tap a row to tick it |
+<a href="docs/i-tour.mp4"><img src="docs/i-tour.gif" width="300" alt="A 48-second tour of the i app: Today with the tilting ball, ticking a Becoming, its habits dialog, to-dos, Routine, Learn, Goals and the habit of the week" /></a>
+
+**[▶ Watch the full video (MP4, 48 s)](docs/i-tour.mp4)** &nbsp;·&nbsp; demo data
+
+| Home-screen widget (Android) |
+|:---:|
+| <img src="docs/screenshots/widget.jpg" width="190" /> |
+| Routine / To-do tabs, today's %, rows in each item's colour; tap a row to tick it |
+
+</div>
+
+**In the video, in order:**
+1. **Today:** tilt the phone and the circle on the cards rolls like a ball on the moon.
+2. **Becoming card** ("🎬 Travel filmmaker → Editing · 1h") gets ticked, which ticks its routine habits.
+3. Tapping it opens **all its habits** with their times.
+4. The colourful **Day plan** bar and the routine list.
+5. **To-do** tab, and the **add sheet** (Just this day / All-time, time left in your day).
+6. **Routine**, **Learn** (a learning opened), **Goals**.
+7. **More → Who I want to be**: the More tab turns into that page's icon with a small ↑.
+8. **🌱 Habit of the week**, picked from your routine.
 
 ## What it does
 
 | Feature | Where |
 |---|---|
 | Daily routine with time per item, tick to mark done | Today → Daily routine |
-| Different routine per weekday (e.g. weekends) | Routine tab → Mon…Sun |
-| **Day plan**: routine + habits + to-dos vs. waking hours | Today |
-| To-dos, optionally **inside** a fixed-time item like Office work | Today → To-do → + |
-| Habit of the week, "graduates" into the routine after 5/7 days | 🌱 button |
+| Optional **time of day** on routine habits and to-dos ("6:30 – 7:30 AM") | Routine editor, add to-do |
+| Different routine per weekday (e.g. weekends); new habits run **every day** by default | Routine tab → Mon…Sun |
+| **Day plan**: one bar piece per routine habit in its own colour, plus to-dos, vs. waking hours | Today |
+| To-dos: **just this day** or **all-time** (shows every day until ticked) | Today → To-do → + |
+| To-dos **inside** a fixed-time item like Office work, using its time | Today → To-do → + |
+| **Not enough time**: a to-do that doesn't fit can't be added; old ones that no longer fit are greyed out | Add to-do, To-do list |
+| **Becoming** (who you want to be) = a group of routine habits; tick it to tick them all, tap it to see each one | Today card, More → Who I want to be |
+| **Habit of the week**, picked from your routine; turn on extra days (e.g. Sunday) or delete it | 🌱 button |
 | **Learnings**: what life taught you, in categories (Life, Communication, Music 🎸…) | Learn tab |
-| Who I want to be + its daily habit (shown on Home) | More → Who I want to be |
 | Resolutions per year, Needs vs Wants (with ₹ totals) | Goals tab, More |
 | Week chart and colour-coded calendar | 📊 button, 📅 button |
 | **Insights**: the app reads your last 14 days and suggests changes | More → Insights |
+| **Daily record**: every night at 11:59 PM IST each person's full day is saved (missed nights filled in) | Automatic (Vercel Cron) |
 | Resizable home-screen widget: today's %, coloured routine rows, tick from the home screen | Android home screen |
-| Emoji and music icons (🎵 🎸 🎹 🥁 🎧 …) for routine items and categories | Any emoji picker |
+| The circle on the habit cards **rolls when you tilt the phone** | Today |
+| Emoji and music icons (🎵 🎸 🎹 🥁 🎧 …), 19 colours for routine items and categories | Any picker |
 | **Light / dark mode** (Auto follows the phone); the widget follows it too | More → Account → Appearance |
+
+### Becoming and the habit of the week
+
+```mermaid
+flowchart LR
+    R["Routine habits<br/>Editing 1h · Shooting 30m · Meditate 15m"]
+    B["Becoming: Travel filmmaker<br/>(routine items with its wantToBeId)"]
+    W["Habit of the week<br/>(one routine item, routineId)"]
+    T["Today cards"]
+    R -- "pick in More → Who I want to be" --> B
+    R -- "pick in 🌱" --> W
+    B --> T
+    W --> T
+    T -- "tick Becoming → ticks all its habits for that day" --> R
+    T -- "tick habit of the week → ticks that routine item" --> R
+```
+
+### Daily record (nightly save)
+
+```mermaid
+flowchart LR
+    TAP["Tap ✓ during the day"] -- "saves just the tick" --> DB[("MongoDB")]
+    CRON["Vercel Cron · 11:59 PM IST<br/>GET /api/v1/cron/daily-save<br/>(Authorization: Bearer CRON_SECRET)"] --> EACH["for every person"]
+    EACH -- "save today's full record<br/>+ fill in any of the last 6 days with none" --> DB
+```
+
+The record (`days.snapshot`) keeps every habit and to-do of the day, its time, whether it was done, the % and the day plan. Days you didn't open the app are saved too.
 
 ### Learnings
 
@@ -126,9 +171,9 @@ i/
 │   ├── src/app.js              list of features → add one line per new feature
 │   ├── src/modules/            one file per feature (days, lists, learnings, insights, auth, widget…)
 │   ├── src/db/                 storage (MongoDB or local file) + per-user scoping
-│   └── test/                   22 API tests (incl. two users kept apart)
+│   └── test/                   29 API tests (incl. two users kept apart, Today rules, nightly save)
 ├── api/index.js                Vercel entry: runs the same Express app
-├── vercel.json                 Vercel build + routing
+├── vercel.json                 Vercel build + routing + nightly Cron (11:59 PM IST)
 ├── android/                    Android app (MVVM, see below)
 └── .github/workflows/          ci.yml (tests on every push), release.yml (APK on tags)
 ```
@@ -220,7 +265,7 @@ buildTypes {
 flowchart TD
     E["Edit code"] --> C["git commit"]
     C --> P["git push (master)"]
-    P --> CI["GitHub CI<br/>22 tests + APK build"]
+    P --> CI["GitHub CI<br/>29 tests + APK build"]
     P --> V["Vercel deploy<br/>screens + server together, ~20 s"]
     V --> L["Live for everyone.<br/>Phone shows it on next open"]
     C --> Q{"Changed android/?"}
@@ -272,6 +317,7 @@ Rules: always go **up**, and use `vMAJOR.MINOR.PATCH` with each part below 100. 
 |---|---|---|
 | `MONGODB_URI` | ✅ | Atlas connection link (with password; `@` in the password written as `%40`) |
 | `SESSION_SECRET` | ✅ | Long random text that signs login tokens (32+ characters) |
+| `CRON_SECRET` | ✅ | Long random text the nightly save checks (`openssl rand -hex 32`); Vercel Cron sends it automatically |
 | `APP_TZ` | no | Time zone for "today" (default `Asia/Kolkata`) |
 | `SEED_DEMO` / `ALLOW_RESET` | no | Dummy data / reset button (off on real databases) |
 
