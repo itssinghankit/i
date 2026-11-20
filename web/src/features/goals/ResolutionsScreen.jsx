@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Plus, Trash2, ArrowLeftRight, Star, Target } from 'lucide-react';
-import { api, todayKey, buzz } from '../../lib';
+import { api, keepIfSame, todayKey, buzz } from '../../lib';
 import { Check, Ring, Counter, Segmented, Sheet, Empty, EMOJIS, soft, TimePicker, EmojiPicker } from '../../components';
 
 import QuickAdd from './QuickAdd.jsx';
 
 // ---------- Resolutions per year ----------
-export function Resolutions() {
+export function Resolutions({ refreshKey }) {
   const [year, setYear] = useState(Number(todayKey().slice(0, 4)));
   const [rows, setRows] = useState([]);
   const [dir, setDir] = useState(0);
-  const load = () => api.get(`/resolutions?year=${year}`).then(setRows);
-  useEffect(() => { load(); }, [year]);
+  const load = () => api.get(`/resolutions?year=${year}`).then(keepIfSame(setRows));
+  useEffect(() => { load(); }, [year, refreshKey]);
   const done = rows.filter((r) => r.done).length;
   const pct = rows.length ? Math.round((done / rows.length) * 100) : 0;
   const toggle = (r) => { setRows((x) => x.map((y) => (y._id === r._id ? { ...y, done: !y.done } : y))); api.patch(`/resolutions/${r._id}`, { done: !r.done }); };

@@ -2,6 +2,7 @@
 // Screens and sheets only call these actions; they never talk to the server directly.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { learningsApi } from './api.js';
+import { keepIfSame } from '../../lib/fresh.js';
 
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.createdAt ?? 0) - (b.createdAt ?? 0);
 
@@ -11,7 +12,7 @@ export function useLearnings(refreshKey) {
 
   const load = useCallback(async () => {
     const [c, l] = await Promise.all([learningsApi.categories(), learningsApi.all()]);
-    setCategories(c.sort(byOrder)); setLearnings(l.sort(byOrder));
+    keepIfSame(setCategories)(c.sort(byOrder)); keepIfSame(setLearnings)(l.sort(byOrder));
   }, []);
   useEffect(() => { load().catch(() => setCategories([])); }, [load, refreshKey]);
 

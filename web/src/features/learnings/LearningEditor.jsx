@@ -17,7 +17,7 @@ export default function LearningEditor({ value, categories, onClose, onSave, onN
   return (
     <Sheet open={!!value} onClose={onClose} title={isNew ? 'New learning' : 'Edit learning'}>
       <label className="field-label">What did you learn?</label>
-      <input className="input" autoFocus placeholder="e.g. Listen to understand" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
+      <input className="input" data-autofocus placeholder="e.g. Listen to understand" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
       <label className="field-label">Details</label>
       <textarea className="input textarea" placeholder="What happened, why it matters, how to use it…" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
       <label className="field-label">Category</label>

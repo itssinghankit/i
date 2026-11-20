@@ -53,7 +53,7 @@ export default function WeeklyHabitSheet({ open, onClose, onChanged, toast }) {
       ) : (
         <div>
           <p className="small muted" style={{ marginTop: 0 }}>Pick one small habit to practise every day this week. If it sticks (5+ days), add it to your routine.</p>
-          <input className="input" autoFocus placeholder="e.g. No sugar after 6 PM" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
+          <input className="input" data-autofocus placeholder="e.g. No sugar after 6 PM" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
           <div style={{ marginTop: 10 }}>
             <EmojiPicker value={f.emoji} onChange={(e) => setF((x) => ({ ...x, emoji: e }))} options={[...EMOJIS.slice(0, 15), ...MUSIC.slice(0, 8)]} />
           </div>

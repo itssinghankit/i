@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Plus, Trash2, ArrowLeftRight, Star, Target } from 'lucide-react';
-import { api, todayKey, buzz } from '../../lib';
+import { api, keepIfSame, todayKey, buzz } from '../../lib';
 import { Check, Ring, Counter, Segmented, Sheet, Empty, EMOJIS, soft, TimePicker, EmojiPicker } from '../../components';
 
 import QuickAdd from './QuickAdd.jsx';
 
 // ---------- Needs vs Wants ----------
-export function NeedsWants() {
+export function NeedsWants({ refreshKey }) {
   const [type, setType] = useState('need');
   const [rows, setRows] = useState([]);
   const [adding, setAdding] = useState(false);
-  const load = () => api.get('/needsWants').then(setRows);
-  useEffect(() => { load(); }, []);
+  const load = () => api.get('/needsWants').then(keepIfSame(setRows));
+  useEffect(() => { load(); }, [refreshKey]);
   const list = rows.filter((r) => r.type === type);
   const total = (t) => rows.filter((r) => r.type === t && !r.done).reduce((s, r) => s + (Number(r.price) || 0), 0);
   const money = (n) => `₹${n.toLocaleString('en-IN')}`;
@@ -72,7 +72,7 @@ function AddNeedWant({ open, type, onClose, onSaved }) {
     <Sheet open={open} onClose={onClose} title="Add item">
       <Segmented layoutId="nwAddSeg" value={f.type} onChange={(t) => setF({ ...f, type: t })} options={[{ value: 'need', label: 'Need' }, { value: 'want', label: 'Want' }]} />
       <label className="field-label">What is it?</label>
-      <input className="input" autoFocus value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="e.g. New laptop" />
+      <input className="input" data-autofocus value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="e.g. New laptop" />
       <label className="field-label">Rough cost (₹)</label>
       <input className="input" inputMode="numeric" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value.replace(/\D/g, '') })} placeholder="0" />
       <label className="field-label">Why / note</label>

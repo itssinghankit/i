@@ -1,7 +1,7 @@
 import { memo, useEffect, useState, useCallback, useRef } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CalendarDays, ChartColumnBig, Plus, Trash2, Sprout, Check as CheckIcon } from 'lucide-react';
-import { api, todayKey, addDays, fmt, mins, fromKey, toKey, buzz } from '../../lib';
+import { api, keepIfSame, todayKey, addDays, fmt, mins, fromKey, toKey, buzz } from '../../lib';
 import { Check, Ring, Counter, Segmented, Sheet, Empty, spring, soft } from '../../components';
 
 import HabitCard from './HabitCard.jsx';
@@ -20,7 +20,7 @@ export default memo(function Home({ date, setDate, refreshKey, openWeekly, openA
   const [chartOpen, setChartOpen] = useState(false);
   const lastPct = useRef(null);
 
-  const load = useCallback(() => api.get(`/day/${date}`).then(setData), [date]);
+  const load = useCallback(() => api.get(`/day/${date}`).then(keepIfSame(setData)), [date]);
   useEffect(() => { load(); }, [load, refreshKey]);
 
   useEffect(() => {

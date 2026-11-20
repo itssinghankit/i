@@ -47,6 +47,9 @@ export default function App({ user = null, onSignOut = null }) {
   const [todoFor, setTodoFor] = useState(null);
   const [date, setDate] = useState(todayKey());
   const [refreshKey, setRefreshKey] = useState(0);
+  // Each tab reloads its data every time you switch to it: its own visit counter goes up.
+  const [visits, setVisits] = useState({});
+  const keyFor = (id) => `${refreshKey}.${visits[id] || 0}`;
   const [counts, setCounts] = useState({});
   const [toast, setToast] = useToast();
   const [canReset, setCanReset] = useState(false);
@@ -83,7 +86,7 @@ export default function App({ user = null, onSignOut = null }) {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const open = (id) => { buzz(8); setPrev(screen); setScreen(id); setMenu(false); };
+  const open = (id) => { buzz(8); setPrev(screen); setScreen(id); setMenu(false); setVisits((v) => ({ ...v, [id]: (v[id] || 0) + 1 })); };
   const dir = ORDER.indexOf(screen) >= ORDER.indexOf(prev) ? 1 : -1;
   const activeTab = ['needs', 'wantToBe', 'insights'].includes(screen) ? 'more' : screen;
 
@@ -96,18 +99,18 @@ export default function App({ user = null, onSignOut = null }) {
           no rebuild, no re-download, no replayed animations, same scroll position. */}
       <div className="scroll" ref={homeScroll} onScroll={onScroll} aria-hidden={screen !== 'home'}
         style={screen === 'home' ? HOME_SHOWN : HOME_HIDDEN}>
-        <Home date={date} setDate={setDate} refreshKey={refreshKey} openWeekly={openWeekly} openAddTodo={setTodoFor} onCounts={setCounts} />
+        <Home date={date} setDate={setDate} refreshKey={keyFor('home')} openWeekly={openWeekly} openAddTodo={setTodoFor} onCounts={setCounts} />
       </div>
       {/* Other tabs: built the first time you open them, then kept alive the same way as Today. */}
       {OTHER_SCREENS.filter((id) => visited.has(id) || id === screen).map((id) => (
         <div key={id} className="scroll" onScroll={onScroll} ref={(el) => { scrollEls.current[id] = el; }} aria-hidden={screen !== id}
           style={screen === id ? SCREEN_SHOWN : SCREEN_HIDDEN}>
           <Suspense fallback={<div className="card pulse" style={{ height: 220, marginTop: 70 }} />}>
-            {id === 'routine' && <Routine onChanged={refresh} refreshKey={refreshKey} />}
-            {id === 'learnings' && <Learnings refreshKey={refreshKey} />}
-            {id === 'resolutions' && <Resolutions />}
-            {id === 'needs' && <NeedsWants />}
-            {id === 'wantToBe' && <WantToBe onChanged={refresh} refreshKey={refreshKey} />}
+            {id === 'routine' && <Routine onChanged={refresh} refreshKey={keyFor('routine')} />}
+            {id === 'learnings' && <Learnings refreshKey={keyFor('learnings')} />}
+            {id === 'resolutions' && <Resolutions refreshKey={keyFor('resolutions')} />}
+            {id === 'needs' && <NeedsWants refreshKey={keyFor('needs')} />}
+            {id === 'wantToBe' && <WantToBe onChanged={refresh} refreshKey={keyFor('wantToBe')} />}
             {id === 'insights' && <Insights onChanged={refresh} toast={setToast} active={screen === 'insights'} />}
           </Suspense>
         </div>
@@ -116,8 +119,6 @@ export default function App({ user = null, onSignOut = null }) {
       {/* Floating tab bar + habit-of-the-week button */}
       <div className="tabbar-wrap">
         <motion.nav className="tabbar" initial={{ y: 100 }} animate={{ y: 0 }} transition={{ ...soft, delay: 0.1 }}>
-          {/* One pill that slides with CSS (no measuring on every tab switch) */}
-          <span className="tab-pill" style={{ width: `calc((100% - 12px) / ${TABS.length})`, transform: `translateX(${TABS.findIndex((t) => t.id === activeTab) * 100}%)` }} />
           {TABS.map((t) => {
             const on = activeTab === t.id;
             const badge = t.id === 'home' ? counts.routineLeft : null;

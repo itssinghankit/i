@@ -35,7 +35,7 @@ export default function AddTodoSheet({ target, onClose, onSaved }) {
   return (
     <Sheet open={!!target} onClose={onClose} title="New to-do">
       <form onSubmit={save}>
-        <input className="input" autoFocus placeholder="What needs doing?" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input className="input" data-autofocus placeholder="What needs doing?" value={title} onChange={(e) => setTitle(e.target.value)} />
         <label className="field-label">When</label>
         <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
           {dates.map(([d, label]) => (

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Plus, Trash2, ArrowLeftRight, Star, Target } from 'lucide-react';
-import { api, todayKey, buzz } from '../../lib';
+import { api, keepIfSame, todayKey, buzz } from '../../lib';
 import { Check, Ring, Counter, Segmented, Sheet, Empty, EMOJIS, MUSIC, soft, TimePicker, EmojiPicker } from '../../components';
 
 import QuickAdd from './QuickAdd.jsx';
@@ -10,7 +10,7 @@ import QuickAdd from './QuickAdd.jsx';
 export function WantToBe({ onChanged, refreshKey }) {
   const [rows, setRows] = useState([]);
   const [adding, setAdding] = useState(false);
-  const load = () => api.get('/wantToBe').then((r) => setRows(r.sort((a, b) => a.byYear - b.byYear)));
+  const load = () => api.get('/wantToBe').then((r) => keepIfSame(setRows)(r.sort((a, b) => a.byYear - b.byYear)));
   useEffect(() => { load(); }, [refreshKey]);
   const activate = async (r) => { buzz(20); setRows((x) => x.map((y) => ({ ...y, active: y._id === r._id }))); await api.post(`/wantToBe/${r._id}/activate`); onChanged?.(); };
   const remove = async (r) => { await api.del(`/wantToBe/${r._id}`); load(); onChanged?.(); };
@@ -60,7 +60,7 @@ function AddWantToBe({ open, onClose, onSaved }) {
   return (
     <Sheet open={open} onClose={onClose} title="I want to be…">
       <label className="field-label">Who do you want to become?</label>
-      <input className="input" autoFocus value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="e.g. A calm, focused person" />
+      <input className="input" data-autofocus value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="e.g. A calm, focused person" />
       <label className="field-label">One small thing to do every day for it</label>
       <input className="input" value={f.habit} onChange={(e) => setF({ ...f, habit: e.target.value })} placeholder="e.g. 10 minutes of meditation" />
       <label className="field-label">Time it takes each day</label>

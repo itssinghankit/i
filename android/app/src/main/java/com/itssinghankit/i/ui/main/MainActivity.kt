@@ -51,6 +51,7 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
     private var loadedId = 0L
     private var shownError: LoadError? = null
     private var safe = floatArrayOf(0f, 0f, 0f, 0f) // status / gesture bar sizes in CSS px: top, bottom, left, right
+    private var keyboard = 0f                          // on-screen keyboard height in CSS px (0 = closed)
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -182,6 +183,9 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             val d = resources.displayMetrics.density
             safe = floatArrayOf(bars.top / d, bars.bottom / d, bars.left / d, bars.right / d)
+            // The page keeps its full size when the keyboard opens (adjustNothing in the manifest), so nothing
+            // re-lays out. The page only learns the keyboard height (--kb) and lifts the open sheet by that much.
+            keyboard = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom / d
             pushSafeArea()
             insets
         }
@@ -192,7 +196,7 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
         val (t, b, l, r) = safe.toList()
         web.evaluateJavascript(
             "(function(s){s.setProperty('--safe-t','${t}px');s.setProperty('--safe-b','${b}px');" +
-                "s.setProperty('--safe-l','${l}px');s.setProperty('--safe-r','${r}px')})(document.documentElement.style)", null)
+                "s.setProperty('--safe-l','${l}px');s.setProperty('--safe-r','${r}px');s.setProperty('--kb','${keyboard}px')})(document.documentElement.style)", null)
     }
 
     /** Sends a value into the page as a JavaScript string, safely quoted. */

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { m as motion, Reorder, AnimatePresence } from 'framer-motion';
 import ReorderRow from '../../components/ReorderRow.jsx';
 import { Plus, GripVertical, Minus, Trash2, Moon } from 'lucide-react';
-import { api, mins, buzz, todayKey, fromKey } from '../../lib';
+import { api, keepIfSame, mins, buzz, todayKey, fromKey } from '../../lib';
 import { Sheet, Empty, EMOJIS, MUSIC, COLORS, soft, spring, TimePicker, EmojiPicker } from '../../components';
 
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -23,7 +23,7 @@ export default function Routine({ onChanged, refreshKey }) {
   const [edit, setEdit] = useState(null); // null = closed, {} = new, item = editing
   const [day, setDay] = useState(() => (fromKey(todayKey()).getDay() + 6) % 7);
   const [sleep, setSleep] = useState(8);
-  const load = () => api.get('/routine').then(setItems);
+  const load = () => api.get('/routine').then(keepIfSame(setItems));
   useEffect(() => { load(); api.get('/settings').then((s) => setSleep(s.sleepHours)); }, [refreshKey]);
 
   const awake = (24 - sleep) * 60;
@@ -158,7 +158,7 @@ function RoutineEditor({ item, onClose, onSaved }) {
       <motion.div className="emoji" style={{ width: 64, height: 64, fontSize: 32, borderRadius: 20, margin: '0 auto', background: `${f.color}22` }}
         key={f.emoji + f.color} initial={{ scale: 0.6, rotate: -10 }} animate={{ scale: 1, rotate: 0 }} transition={soft}>{f.emoji}</motion.div>
       <label className="field-label">What do you do?</label>
-      <input className="input" autoFocus placeholder="e.g. Office work" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
+      <input className="input" data-autofocus placeholder="e.g. Office work" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
 
       <label className="field-label">How long does it take?</label>
       <TimePicker value={Number(f.minutes) || 0} onChange={(m) => setF((x) => ({ ...x, minutes: m }))} presets={[10, 15, 30, 45, 60, 120]} max={18 * 60} />
