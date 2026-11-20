@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">i</string>
+    <string name="widget_name">i · Today</string>
+    <string name="widget_desc">Daily routine and to-dos for today</string>
+</resources>

@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.I" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="colorPrimary">@color/violet</item>
+        <item name="colorAccent">@color/violet</item>
+    </style>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/item_root"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:gravity="center_vertical" android:orientation="horizontal"
+    android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="8dp" android:paddingBottom="8dp">
+    <TextView android:id="@+id/item_check"
+        android:layout_width="22dp" android:layout_height="22dp" android:gravity="center"
+        android:background="@drawable/check_off" android:textColor="#FFFFFF" android:textSize="12sp" android:textStyle="bold" />
+    <TextView android:id="@+id/item_title"
+        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+        android:layout_marginStart="12dp" android:maxLines="2" android:ellipsize="end"
+        android:textColor="@color/ink" android:textSize="14sp" />
+    <TextView android:id="@+id/item_time"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:background="@drawable/time_bg" android:paddingStart="8dp" android:paddingEnd="8dp"
+        android:paddingTop="2dp" android:paddingBottom="2dp"
+        android:textColor="@color/violet" android:textSize="11sp" android:textStyle="bold" />
+</LinearLayout>
