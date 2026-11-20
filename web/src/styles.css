@@ -315,3 +315,6 @@ h2 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; margin: 0; }
 .inside-todo + .inside-todo { border-top: 1px dashed var(--line); }
 .inside-todo .inside-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; margin-top: 7px; }
 .inside-todo .check { flex: none; }
+
+/* Day plan bar on Today: one piece per routine habit in its own colour, free time left empty */
+.plan-bar { display: flex; height: 14px; border-radius: 9px; overflow: hidden; margin-top: 12px; background: var(--soft); gap: 2px; }

@@ -1,19 +1,19 @@
-import { memo, useEffect, useState, useCallback, useRef } from 'react';
-import { m as motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, CalendarDays, ChartColumnBig, Plus, Trash2, Sprout, Check as CheckIcon } from 'lucide-react';
-import { api, todayKey, addDays, fmt, mins, fromKey, toKey, buzz } from '../../lib';
-import { Check, Ring, Counter, Segmented, Sheet, Empty, spring, soft } from '../../components';
-
+import { m as motion } from 'framer-motion';
+import { mins } from '../../lib';
+import { spring, soft } from '../../components';
 
 // Is everything planned for this day possible? Routine + habits + standalone to-dos vs waking hours.
-export default function DayBudget({ b }) {
+// The bar is one piece per routine habit, in that habit's own colour (in routine order), then any
+// extra habit time and the day's standalone to-dos. The empty part at the end is free time.
+export default function DayBudget({ b, routine = [] }) {
   if (!b) return null;
-  const parts = [
-    { label: 'Routine', m: b.routineMinutes, c: 'linear-gradient(90deg,#6366f1,#38bdf8)' },
-    { label: 'Habits', m: b.habitMinutes, c: 'linear-gradient(90deg,#a855f7,#ec4899)' },
-    { label: 'To-dos', m: b.todoMinutes, c: 'linear-gradient(90deg,#22c55e,#84cc16)' },
+  const total = Math.max(b.awakeMinutes, b.plannedMinutes) || 1;
+  const pieces = [
+    ...routine.filter((r) => Number(r.minutes) > 0).map((r) => ({ key: r._id, title: r.title, m: Number(r.minutes), c: r.color || '#6366f1' })),
+    ...(b.habitMinutes > 0 ? [{ key: 'habits', title: 'Habits', m: b.habitMinutes, c: '#a855f7' }] : []),
+    ...(b.todoMinutes > 0 ? [{ key: 'todos', title: 'To-dos', m: b.todoMinutes, c: '#22c55e' }] : []),
   ];
-  const total = Math.max(b.awakeMinutes, b.plannedMinutes);
+  const extra = [b.habitMinutes > 0 && `Habits ${mins(b.habitMinutes)}`, b.todoMinutes > 0 && `To-dos ${mins(b.todoMinutes)}`].filter(Boolean);
   return (
     <motion.div className="card" style={{ padding: 16, marginTop: 12 }}>
       <div className="between">
@@ -26,18 +26,14 @@ export default function DayBudget({ b }) {
           {b.fits ? `✓ ${mins(b.freeMinutes)} free` : `Over by ${mins(-b.freeMinutes)}`}
         </motion.span>
       </div>
-      <div style={{ display: 'flex', height: 14, borderRadius: 9, overflow: 'hidden', marginTop: 12, background: 'var(--soft)', gap: 2 }}>
-        {parts.map((p, i) => p.m > 0 && (
-          <motion.div key={p.label} style={{ background: p.c }} initial={{ width: 0 }} animate={{ width: `${(p.m / total) * 100}%` }} transition={{ ...soft, delay: i * 0.08 }} />
+      <div className="plan-bar" role="img" aria-label={pieces.map((p) => `${p.title} ${mins(p.m)}`).join(', ')}>
+        {pieces.map((p, i) => (
+          <motion.div key={p.key} title={`${p.title} · ${mins(p.m)}`} style={{ background: p.c, minWidth: 3 }}
+            initial={{ width: 0 }} animate={{ width: `${(p.m / total) * 100}%` }} transition={{ ...soft, delay: Math.min(i, 12) * 0.03 }} />
         ))}
       </div>
-      <div className="row tiny" style={{ gap: 12, marginTop: 8, flexWrap: 'wrap', color: 'var(--ink-2)' }}>
-        {parts.map((p) => (
-          <span key={p.label} className="row" style={{ gap: 5 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 3, background: p.c }} />{p.label} {mins(p.m)}
-          </span>
-        ))}
-        <span className="faint">Sleep {b.sleepHours}h</span>
+      <div className="tiny" style={{ marginTop: 8, color: 'var(--ink-2)' }}>
+        Routine {mins(b.routineMinutes)}{extra.length ? ` · ${extra.join(' · ')}` : ''}<span className="faint"> · Sleep {b.sleepHours}h</span>
       </div>
     </motion.div>
   );

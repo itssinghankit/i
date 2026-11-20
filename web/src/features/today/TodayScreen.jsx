@@ -166,7 +166,7 @@ export default memo(function Home({ date, setDate, refreshKey, openWeekly, openA
               </div>
             </motion.div>
 
-            <DayBudget b={data.budget} />
+            <DayBudget b={data.budget} routine={data.routine} />
 
             <div style={{ marginTop: 18 }}>
               <Segmented layoutId="homeSeg" value={seg} onChange={setSeg} options={[
