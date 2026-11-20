@@ -1,4 +1,13 @@
 <resources>
+    <!-- Splash screen shown while the app starts (androidx core-splashscreen, works on Android 8+;
+         the icon animation plays on Android 12+, older versions show the finished icon). -->
+    <style name="Theme.I.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/violet</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_animated</item>
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <item name="postSplashScreenTheme">@style/Theme.I</item>
+    </style>
+
     <style name="Theme.I" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
         <item name="colorPrimary">@color/violet</item>
