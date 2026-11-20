@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
-import { Sun, Repeat, Flag, Ellipsis, BookOpen, Sprout, X, UserRound, ChevronRight, Scale, Rocket, Lightbulb, GraduationCap, RotateCcw } from 'lucide-react';
+import { Sun, Repeat, Flag, Ellipsis, BookOpen, Sprout, X, UserRound, ChevronRight, ChevronUp, Scale, Rocket, Lightbulb, GraduationCap, RotateCcw } from 'lucide-react';
 import { api, todayKey, addDays, fmt, buzz, mins, applyTheme } from '../lib';
 import { Sheet, spring, soft, useToast, EMOJIS, TimePicker, EmojiPicker } from '../components';
 import Home from '../features/today/TodayScreen.jsx';
@@ -23,10 +23,11 @@ const TABS = [
   { id: 'resolutions', label: 'Goals', icon: Flag },
   { id: 'more', label: 'More', icon: Ellipsis },
 ];
+// short: what the More tab shows while you're on that page (the tab is narrow).
 const MORE = [
-  { id: 'needs', label: 'Needs vs Wants', icon: Scale },
-  { id: 'wantToBe', label: 'Who I want to be', icon: Rocket },
-  { id: 'insights', label: 'Insights', icon: Lightbulb },
+  { id: 'needs', label: 'Needs vs Wants', short: 'Needs', icon: Scale },
+  { id: 'wantToBe', label: 'Who I want to be', short: 'Future', icon: Rocket },
+  { id: 'insights', label: 'Insights', short: 'Insights', icon: Lightbulb },
 ];
 // Hidden tabs stay alive (state, data, scroll position kept) but the browser skips drawing them
 // (content-visibility: hidden). Before, every visited tab was its own GPU layer (will-change), and a
@@ -89,7 +90,10 @@ export default function App({ user = null, onSignOut = null }) {
 
   const open = (id) => { buzz(8); setPrev(screen); setScreen(id); setMenu(false); setVisits((v) => ({ ...v, [id]: (v[id] || 0) + 1 })); };
   const dir = ORDER.indexOf(screen) >= ORDER.indexOf(prev) ? 1 : -1;
-  const activeTab = ['needs', 'wantToBe', 'insights'].includes(screen) ? 'more' : screen;
+  // On a page from More, the More tab shows that page (icon + short name + a small up arrow).
+  // Tapping any tab outside More switches back to "⋯ More".
+  const moreItem = MORE.find((m) => m.id === screen);
+  const activeTab = moreItem ? 'more' : screen;
 
   return (
     <div className="frame">
@@ -123,11 +127,16 @@ export default function App({ user = null, onSignOut = null }) {
           {TABS.map((t) => {
             const on = activeTab === t.id;
             const badge = t.id === 'home' ? counts.routineLeft : null;
-            const Icon = t.icon;
+            const picked = t.id === 'more' ? moreItem : null;
+            const Icon = picked ? picked.icon : t.icon;
             return (
-              <button key={t.id} className={`tab ${on ? 'on' : ''}`} onClick={() => (t.id === 'more' ? setMenu(true) : open(t.id))}>
-                <span className="tab-icon"><Icon size={22} strokeWidth={on ? 2.3 : 1.8} /></span>
-                {t.label}
+              <button key={t.id} className={`tab ${on ? 'on' : ''}`} onClick={() => (t.id === 'more' ? setMenu(true) : open(t.id))}
+                aria-label={picked ? `${picked.label} (from More)` : undefined}>
+                <span className="tab-icon">
+                  <Icon size={22} strokeWidth={on ? 2.3 : 1.8} />
+                  {picked && <ChevronUp className="tab-up" size={13} strokeWidth={2.8} aria-hidden="true" />}
+                </span>
+                {picked ? <span className="tab-picked">{picked.short}</span> : t.label}
                 <AnimatePresence>
                   {badge > 0 && (
                     <motion.span key={badge} className="badge" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={spring}>{badge}</motion.span>

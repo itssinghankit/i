@@ -11,6 +11,7 @@ process.env.GOOGLE_CLIENT_ID = 'test-client.apps.googleusercontent.com';
 process.env.SESSION_SECRET = 'x'.repeat(40);
 process.env.SEED_DEMO = 'true';
 process.env.ALLOW_RESET = 'true';
+process.env.CRON_SECRET = 'test-cron-secret';
 
 const { openStore } = await import('../src/db/store.js');
 const { seedIfEmpty } = await import('../src/db/seed.js');
@@ -24,7 +25,7 @@ const people = {
 };
 const verifyGoogleToken = async (cred) => { if (!people[cred]) throw new Error('bad token'); return people[cred]; };
 
-let server, base;
+let server, base, store;
 const call = async (method, url, body, token) => {
   const headers = { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) };
   const res = await fetch(base + url, { method, headers, body: body && JSON.stringify(body) });
@@ -33,7 +34,7 @@ const call = async (method, url, body, token) => {
 const signIn = async (who) => (await call('POST', '/auth/google', { credential: who })).body;
 
 before(async () => {
-  const store = await openStore();
+  store = await openStore();
   await store.wipe();
   await store.remove('users', {});
   await seedIfEmpty(store, true); // demo data with no owner yet, like data saved before sign-in existed
@@ -105,4 +106,24 @@ test('widget works with a token', async () => {
   const owner = (await signIn('owner')).token;
   assert.equal((await call('GET', '/widget', null, owner)).status, 200);
   assert.equal((await call('GET', '/widget')).status, 401);
+});
+
+test('nightly save runs for every signed-in person, each with only their own data', async () => {
+  const owner = await signIn('owner');
+  const friend = await signIn('friend');
+  // The friend has one routine habit of their own; the owner has the demo routine.
+  await call('POST', '/routine', { title: 'Friend habit', minutes: 10 }, friend.token);
+  const night = today();
+  const r = await fetch(`${base}/cron/daily-save?date=${night}`, { headers: { authorization: 'Bearer test-cron-secret' } }).then((x) => x.json());
+  assert.equal(r.users, 2);
+  assert.equal(r.failed, 0);
+  const rows = await store.find('days', { date: night });
+  const of = (u) => rows.find((x) => x.userId === u.user.id)?.snapshot;
+  const ownerTitles = of(owner).routine.map((x) => x.title);
+  const friendTitles = of(friend).routine.map((x) => x.title);
+  assert.ok(friendTitles.includes('Friend habit'));
+  assert.ok(!ownerTitles.includes('Friend habit'), "the owner's record has none of the friend's habits");
+  assert.ok(!friendTitles.some((x) => ownerTitles.includes(x)), "the friend's record has none of the owner's habits");
+  // Without the secret: refused, even for a signed-in person.
+  assert.equal((await call('GET', '/cron/daily-save', null, owner.token)).status, 401);
 });

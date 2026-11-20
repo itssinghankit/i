@@ -5,9 +5,10 @@ import { wrap, bad, pick } from '../lib/http.js';
 //   fields   – which body fields may be saved
 //   filters  – which query params can filter the list, with a converter (e.g. Number)
 //   onCreate – fill in defaults before saving
+//   prepare  – check / tidy the saved fields, on create and on update (throw { status: 400 } to refuse)
 //   sort     – order the list
 // A new simple feature is usually just one call to this function.
-export function crudRouter(store, collection, { fields, filters = {}, onCreate, sort } = {}) {
+export function crudRouter(store, collection, { fields, filters = {}, onCreate, prepare, sort } = {}) {
   const r = Router();
   r.get('/', wrap(async (req, res) => {
     const filter = {};
@@ -18,11 +19,14 @@ export function crudRouter(store, collection, { fields, filters = {}, onCreate, 
   r.post('/', wrap(async (req, res) => {
     const doc = pick(req.body, fields);
     if (!doc.title?.trim()) return bad(res, 'title is required');
+    if (prepare) prepare(doc);
     if (onCreate) await onCreate(doc);
     res.status(201).json(await store.insert(collection, doc));
   }));
   r.patch('/:id', wrap(async (req, res) => {
-    const row = await store.update(collection, { _id: req.params.id }, pick(req.body, fields));
+    const patch = pick(req.body, fields);
+    if (prepare) prepare(patch);
+    const row = await store.update(collection, { _id: req.params.id }, patch);
     row ? res.json(row) : res.status(404).json({ error: 'not found' });
   }));
   r.delete('/:id', wrap(async (req, res) => {

@@ -1,4 +1,5 @@
-// Habit of the week: one habit per week; when it sticks it can "graduate" into the daily routine.
+// Habit of the week: one habit per week, picked from your routine (routineId). Ticking it ticks that routine item.
+// Older weeks may hold a typed-in habit (no routineId); those can still "graduate" into the routine.
 import { Router } from 'express';
 import { wrap, bad } from '../lib/http.js';
 import { today, weekStart, weekDays, isKey } from '../lib/dates.js';
@@ -10,17 +11,23 @@ export function weeklyHabitsModule({ store, progress }) {
     const rows = (await store.find('weeklyHabits')).sort((a, b) => b.weekStart.localeCompare(a.weekStart));
     const habits = await Promise.all(rows.map(async (h) => {
       const days = await Promise.all(weekDays(h.weekStart).map(progress.getDay));
-      return { ...h, daysDone: days.filter((d) => d.weeklyDone).length };
+      return { ...h, daysDone: days.filter((d) => progress.weeklyDoneOn(h, d)).length };
     }));
     res.json({ currentWeek: weekStart(today()), habits });
   }));
 
+  // { routineId, date? }: this week's habit is that routine item.
   r.post('/', wrap(async (req, res) => {
-    const { title, emoji = '✨' } = req.body;
-    const minutes = Number(req.body.minutes) || 10;
-    if (!title?.trim()) return bad(res, 'title is required');
+    const item = req.body.routineId && (await store.findOne('routine', { _id: req.body.routineId }));
+    if (!item) return bad(res, 'pick a habit from your routine');
     const ws = weekStart(isKey(req.body.date) ? req.body.date : today());
-    res.json(await store.upsert('weeklyHabits', { weekStart: ws }, { title, emoji, minutes, addedToRoutine: false }));
+    res.json(await store.upsert('weeklyHabits', { weekStart: ws },
+      { routineId: item._id, title: item.title, emoji: item.emoji, minutes: Number(item.minutes) || 0, addedToRoutine: true }));
+  }));
+
+  // Remove a week's habit (the routine item itself stays).
+  r.delete('/:id', wrap(async (req, res) => {
+    res.json({ removed: await store.remove('weeklyHabits', { _id: req.params.id }) });
   }));
 
   r.post('/:id/graduate', wrap(async (req, res) => {

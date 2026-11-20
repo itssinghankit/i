@@ -4,47 +4,43 @@ import { wrap, bad } from '../lib/http.js';
 import { today, addDays, weekStart, weekDays, isKey } from '../lib/dates.js';
 
 export function daysModule({ store, progress }) {
-  const { sortedRoutine, routineFor, getDay, pctFor, percentOn, budget } = progress;
+  const { sortedRoutine, routineFor, getDay, percentOn } = progress;
   const r = Router();
 
   r.get('/day/:date', wrap(async (req, res) => {
     const { date } = req.params;
     if (!isKey(date)) return bad(res, 'date must be YYYY-MM-DD');
-    const [routine, day, todos, weekly, wantToBe] = await Promise.all([
-      routineFor(date), getDay(date), store.find('todos', { date }),
-      store.findOne('weeklyHabits', { weekStart: weekStart(date) }), store.findOne('wantToBe', { active: true }),
-    ]);
-    const done = new Set(day.routineDone);
-    // A to-do whose parent item doesn't run today is shown as a normal to-do.
-    const parentIds = new Set(routine.filter((x) => x.holdsTodos).map((x) => x._id));
-    const cleanTodos = todos.map((t) => (t.parentId && !parentIds.has(t.parentId) ? { ...t, parentId: null } : t));
-    res.json({
-      date,
-      routine: routine.map((x) => ({ ...x, done: done.has(x._id) })),
-      todos: cleanTodos.sort((a, b) => Number(a.done) - Number(b.done) || a.createdAt - b.createdAt),
-      weeklyHabit: weekly ? { ...weekly, done: day.weeklyDone } : null,
-      wantToBe: wantToBe ? { ...wantToBe, done: day.wantToBeDone } : null,
-      percent: pctFor(day, routine),
-      totalMinutes: routine.reduce((s, x) => s + x.minutes, 0),
-      doneMinutes: routine.filter((x) => done.has(x._id)).reduce((s, x) => s + x.minutes, 0),
-      budget: await budget({ routine, todos: cleanTodos, weekly, wantToBe }),
-    });
+    res.json(await progress.dayView(date));
   }));
 
   // kind: routine (needs id) | weekly | wantToBe
+  //   weekly   → a habit picked from the routine ticks that routine item; an older typed-in one has its own tick
+  //   wantToBe → ticks (or unticks) every routine habit of the Becoming that runs on this date
   r.post('/day/:date/toggle', wrap(async (req, res) => {
     const { date } = req.params;
     const { kind, id } = req.body;
     if (!isKey(date)) return bad(res, 'bad date');
     const day = await getDay(date);
+    const set = new Set(day.routineDone);
     let patch;
     if (kind === 'routine') {
-      const set = new Set(day.routineDone);
       set.has(id) ? set.delete(id) : set.add(id);
       patch = { routineDone: [...set] };
-    } else if (kind === 'weekly') patch = { weeklyDone: !day.weeklyDone };
-    else if (kind === 'wantToBe') patch = { wantToBeDone: !day.wantToBeDone };
-    else return bad(res, 'unknown kind');
+    } else if (kind === 'weekly') {
+      const weekly = await store.findOne('weeklyHabits', { weekStart: weekStart(date) });
+      if (weekly?.routineId) {
+        set.has(weekly.routineId) ? set.delete(weekly.routineId) : set.add(weekly.routineId);
+        patch = { routineDone: [...set] };
+      } else patch = { weeklyDone: !day.weeklyDone };
+    } else if (kind === 'wantToBe') {
+      const active = await store.findOne('wantToBe', { active: true });
+      const habits = active ? (await routineFor(date)).filter((x) => x.wantToBeId === active._id) : [];
+      if (habits.length) {
+        const allDone = habits.every((h) => set.has(h._id));
+        habits.forEach((h) => (allDone ? set.delete(h._id) : set.add(h._id)));
+        patch = { routineDone: [...set] };
+      } else patch = { wantToBeDone: !day.wantToBeDone };
+    } else return bad(res, 'unknown kind');
     res.json(await store.upsert('days', { date }, patch));
   }));
 

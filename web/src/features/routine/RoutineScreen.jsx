@@ -3,7 +3,7 @@ import { m as motion, Reorder, AnimatePresence } from 'framer-motion';
 import ReorderRow from '../../components/ReorderRow.jsx';
 import { Plus, GripVertical, Minus, Trash2, Moon } from 'lucide-react';
 import { api, keepIfSame, mins, buzz, todayKey, fromKey } from '../../lib';
-import { Sheet, Empty, EMOJIS, MUSIC, COLORS, soft, spring, TimePicker, EmojiPicker } from '../../components';
+import { Sheet, Empty, EMOJIS, MUSIC, COLORS, soft, spring, TimePicker, EmojiPicker, TimeOfDay } from '../../components';
 
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const ALL = [0, 1, 2, 3, 4, 5, 6];
@@ -55,7 +55,7 @@ export default function Routine({ onChanged, refreshKey }) {
           <h1>Routine</h1>
         </div>
         <motion.button whileTap={{ scale: 0.88 }} className="icon-btn" style={{ width: 46, height: 46, background: 'var(--grad)', color: '#fff', border: 0 }}
-          onClick={() => setEdit({ days: day >= 5 ? [5, 6] : ALL })} aria-label="Add routine item"><Plus size={22} /></motion.button>
+          onClick={() => setEdit({ days: ALL })} aria-label="Add routine item"><Plus size={22} /></motion.button>
       </div>
 
       {/* Mon…Sun picker. Each chip shows the total time of that day's routine and turns red if it doesn't fit. */}
@@ -139,13 +139,16 @@ function RoutineRow({ r, onEdit, onDrop }) {
 }
 
 function RoutineEditor({ item, onClose, onSaved }) {
-  const blank = { title: '', minutes: 15, emoji: '✨', color: COLORS[0], days: ALL, holdsTodos: false };
+  const blank = { title: '', minutes: 15, emoji: '✨', color: COLORS[0], days: ALL, holdsTodos: false, time: null, wantToBeId: null };
   const [f, setF] = useState(blank);
+  const [becomings, setBecomings] = useState([]);
   useEffect(() => { if (item) setF({ ...blank, ...item, days: daysOf(item) }); }, [item]);
+  // The Becomings this habit can belong to (e.g. "Travel filmmaker").
+  useEffect(() => { if (item) api.get('/wantToBe').then(setBecomings).catch(() => setBecomings([])); }, [item]);
   const isNew = !item?._id;
   const save = async () => {
     if (!f.title.trim() || !f.days.length) return;
-    const body = { title: f.title.trim(), minutes: Number(f.minutes) || 5, emoji: f.emoji, color: f.color, days: f.days.slice().sort(), holdsTodos: !!f.holdsTodos };
+    const body = { title: f.title.trim(), minutes: Number(f.minutes) || 5, emoji: f.emoji, color: f.color, days: f.days.slice().sort(), holdsTodos: !!f.holdsTodos, time: f.time || null, wantToBeId: f.wantToBeId || null };
     if (isNew) await api.post('/routine', body); else await api.patch(`/routine/${item._id}`, body);
     buzz(20); onSaved();
   };
@@ -162,6 +165,9 @@ function RoutineEditor({ item, onClose, onSaved }) {
 
       <label className="field-label">How long does it take?</label>
       <TimePicker value={Number(f.minutes) || 0} onChange={(m) => setF((x) => ({ ...x, minutes: m }))} presets={[10, 15, 30, 45, 60, 120]} max={18 * 60} />
+
+      <label className="field-label">At what time? (optional)</label>
+      <TimeOfDay value={f.time} onChange={(t) => setF((x) => ({ ...x, time: t }))} minutes={Number(f.minutes) || 0} />
 
       <label className="field-label">Which days?</label>
       <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
@@ -191,6 +197,20 @@ function RoutineEditor({ item, onClose, onSaved }) {
           <motion.span layout transition={spring} style={{ width: 22, height: 22, borderRadius: '50%', background: '#fff' }} />
         </motion.span>
       </button>
+
+      {becomings.length > 0 && (
+        <>
+          <label className="field-label">Part of who you want to become</label>
+          <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+            <button className="ghost-btn" style={!f.wantToBeId ? on : undefined} onClick={() => setF({ ...f, wantToBeId: null })}>None</button>
+            {becomings.map((b) => (
+              <button key={b._id} className="ghost-btn" style={f.wantToBeId === b._id ? on : undefined} onClick={() => setF({ ...f, wantToBeId: b._id })}>
+                {b.emoji || '🌟'} {b.title}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       <label className="field-label">Icon</label>
       <EmojiPicker value={f.emoji} onChange={(e) => setF((x) => ({ ...x, emoji: e }))} options={[...EMOJIS.slice(0, 11), '💼', '👨‍👩‍👧', '🗓️', '🍳', ...MUSIC.slice(0, 8)]} />
