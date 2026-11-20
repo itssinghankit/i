@@ -1,8 +1,6 @@
 package com.itssinghankit.i.ui.update
 
-import android.content.Intent
 import android.graphics.Color
-import android.net.Uri
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -27,7 +25,38 @@ import java.util.Locale
  * behind the gesture bar like the web app's sheets. Back, a tap on the dim area, or "Maybe later" closes it.
  */
 object UpdateSheet {
-    fun show(activity: ComponentActivity, host: FrameLayout, info: UpdateInfo) {
+    /** Lets the screen show download progress on the open sheet. */
+    class Handle(private val button: TextView, private val bar: android.widget.ProgressBar, private val meta: TextView, private val baseMeta: String) {
+        var isOpen = true; internal set
+        fun render(state: com.itssinghankit.i.ui.main.DownloadState) {
+            if (!isOpen) return
+            when (state) {
+                com.itssinghankit.i.ui.main.DownloadState.Idle -> {}
+                is com.itssinghankit.i.ui.main.DownloadState.Downloading -> {
+                    button.isEnabled = false; button.alpha = 0.85f
+                    button.text = if (state.percent > 0) "Downloading… ${state.percent}%" else "Starting download…"
+                    bar.visibility = View.VISIBLE; bar.isIndeterminate = state.percent == 0; bar.progress = state.percent
+                    meta.text = "Keep the app open. It installs right after."
+                }
+                is com.itssinghankit.i.ui.main.DownloadState.Ready -> {
+                    button.isEnabled = true; button.alpha = 1f; button.text = "Install"
+                    bar.visibility = View.VISIBLE; bar.isIndeterminate = false; bar.progress = 100
+                    meta.text = "Downloaded. Tap Install if the installer didn't open."
+                }
+                is com.itssinghankit.i.ui.main.DownloadState.Failed -> {
+                    button.isEnabled = true; button.alpha = 1f; button.text = "Try again"
+                    bar.visibility = View.GONE
+                    meta.text = state.message
+                }
+            }
+        }
+        internal fun reset() { meta.text = baseMeta }
+    }
+
+    /**
+     * onUpdate: "Update now" / "Install" / "Try again" was tapped. The sheet stays open and shows progress.
+     */
+    fun show(activity: ComponentActivity, host: FrameLayout, info: UpdateInfo, onUpdate: () -> Unit): Handle {
         val inflater = LayoutInflater.from(activity)
 
         val scrim = View(activity).apply { setBackgroundColor(Color.parseColor("#73000000")); alpha = 0f; isClickable = true }
@@ -52,10 +81,13 @@ object UpdateSheet {
             list.addView(row)
         }
         val size = if (info.sizeBytes > 0) String.format(Locale.US, "%.1f MB · ", info.sizeBytes / 1_048_576.0) else ""
-        sheet.findViewById<TextView>(R.id.update_meta).text = "${size}Installs over the old app, nothing is lost"
+        val baseMeta = "${size}Installs over the old app, nothing is lost"
+        val meta = sheet.findViewById<TextView>(R.id.update_meta).apply { text = baseMeta }
+        val handle = Handle(sheet.findViewById(R.id.update_now), sheet.findViewById(R.id.update_progress), meta, baseMeta)
 
         lateinit var back: OnBackPressedCallback
         fun close() {
+            handle.isOpen = false
             back.remove()
             scrim.animate().alpha(0f).setDuration(200).start()
             sheet.animate().translationY(sheet.height.toFloat()).setDuration(220).withEndAction {
@@ -67,10 +99,7 @@ object UpdateSheet {
 
         scrim.setOnClickListener { close() }
         sheet.findViewById<View>(R.id.update_later).setOnClickListener { close() }
-        sheet.findViewById<View>(R.id.update_now).setOnClickListener {
-            activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl)))
-            close()
-        }
+        sheet.findViewById<View>(R.id.update_now).setOnClickListener { onUpdate() }
 
         // Slide up + fade in, then a small "pop" of the icon.
         sheet.post {
@@ -83,5 +112,6 @@ object UpdateSheet {
             animate().scaleX(1f).scaleY(1f).rotation(0f).setStartDelay(220).setDuration(450)
                 .setInterpolator(OvershootInterpolator(2.2f)).start()
         }
+        return handle
     }
 }

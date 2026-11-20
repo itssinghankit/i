@@ -10,7 +10,8 @@ export default function WeekChartSheet({ open, onClose, anchor, onPickDay }) {
   const [ref, setRef] = useState(anchor);
   const [week, setWeek] = useState(null);
   const [dir, setDir] = useState(0);
-  useEffect(() => { if (open) setRef(anchor); }, [open]);
+  // Always opens on the current week (anchor = today), whatever day or week you looked at before.
+  useEffect(() => { if (open) { if (ref !== anchor) setWeek(null); setDir(0); setRef(anchor); } }, [open]);
   useEffect(() => { if (open) api.get(`/week?date=${ref}`).then(setWeek); }, [open, ref]);
   const shift = (n) => { setDir(n); setRef(addDays(ref, n * 7)); };
   const vals = week?.days.filter((d) => d.percent != null).map((d) => d.percent) || [];

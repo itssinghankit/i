@@ -5,6 +5,7 @@ import com.itssinghankit.i.BuildConfig
 import com.itssinghankit.i.IApplication
 import com.itssinghankit.i.data.local.SessionStore
 import com.itssinghankit.i.data.remote.ApiClient
+import com.itssinghankit.i.data.remote.ApkDownloader
 import com.itssinghankit.i.data.remote.ReleasesApi
 import com.itssinghankit.i.data.repository.SessionRepository
 import com.itssinghankit.i.data.repository.TodayRepository
@@ -21,7 +22,7 @@ class AppContainer(context: Context) {
     val sessionRepository by lazy { SessionRepository(SessionStore(app)) }
     private val apiClient by lazy { ApiClient(baseUrl) { sessionRepository.token() } }
     val todayRepository by lazy { TodayRepository(apiClient) }
-    val updateRepository by lazy { UpdateRepository(ReleasesApi(BuildConfig.GITHUB_REPO), BuildConfig.VERSION_NAME) }
+    val updateRepository by lazy { UpdateRepository(ReleasesApi(BuildConfig.GITHUB_REPO), BuildConfig.VERSION_NAME, ApkDownloader(app.cacheDir)) }
 }
 
 /** Shortcut: context.container */

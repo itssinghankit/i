@@ -5,7 +5,9 @@ import com.itssinghankit.i.data.model.TodayItem
 import com.itssinghankit.i.data.model.TodaySnapshot
 import com.itssinghankit.i.data.model.UpdateInfo
 import com.itssinghankit.i.data.remote.ApiClient
+import com.itssinghankit.i.data.remote.ApkDownloader
 import com.itssinghankit.i.data.remote.ReleasesApi
+import java.io.File
 import org.json.JSONObject
 
 /** Login token for the widget (the web app hands it over after sign-in). */
@@ -39,7 +41,15 @@ class TodayRepository(private val api: ApiClient) {
 }
 
 /** "Is there a newer APK on GitHub?" */
-class UpdateRepository(private val releases: ReleasesApi, private val currentVersion: String) {
+class UpdateRepository(
+    private val releases: ReleasesApi,
+    private val currentVersion: String,
+    private val downloader: ApkDownloader,
+) {
+    /** Downloads the new APK inside the app. Blocking: call from Dispatchers.IO. */
+    fun download(info: UpdateInfo, onProgress: (Int) -> Unit): File =
+        downloader.download(info.downloadUrl, info.version, info.sizeBytes, onProgress)
+
     fun newerVersion(): UpdateInfo? {
         val r = releases.latest() ?: return null
         val remote = r.tag.removePrefix("v")

@@ -5,6 +5,7 @@ import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
+import android.os.Build
 import android.graphics.Color
 import android.os.Bundle
 import android.view.View
@@ -50,6 +51,9 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
     @Volatile private var pageUrl = ""
     private var loadedId = 0L
     private var shownError: LoadError? = null
+    private var updateSheet: UpdateSheet.Handle? = null
+    private var installedFile: java.io.File? = null      // installer already opened for this download
+    private var waitingForInstallPermission = false
     private var safe = floatArrayOf(0f, 0f, 0f, 0f) // status / gesture bar sizes in CSS px: top, bottom, left, right
     private var keyboard = 0f                          // on-screen keyboard height in CSS px (0 = closed)
 
@@ -101,7 +105,16 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
                             web.loadDataWithBaseURL(null, LoadErrorPage.html(s.error.url, s.error.reason), "text/html", "utf-8", null)
                         }
                         shownError = s.error
-                        s.update?.let { UpdateSheet.show(this@MainActivity, root, it); vm.updateShown() }
+                        s.update?.let { info ->
+                            updateSheet = UpdateSheet.show(this@MainActivity, root, info) { onUpdateTapped(info) }
+                            vm.updateShown()
+                        }
+                    }
+                }
+                launch {
+                    vm.download.collect { d ->
+                        updateSheet?.render(d)
+                        if (d is DownloadState.Ready && d.apk != installedFile) { installedFile = d.apk; installApk(d.apk) }
                     }
                 }
                 launch {
@@ -142,8 +155,41 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
         intent.getStringExtra(EXTRA_ROUTE)?.let { vm.openRoute(it) }
     }
 
+    // ---------- in-app update ----------
+    /** "Update now" (download), "Install" (open the installer again) or "Try again". */
+    private fun onUpdateTapped(info: com.itssinghankit.i.data.model.UpdateInfo) {
+        val d = vm.download.value
+        when {
+            d is DownloadState.Ready -> installApk(d.apk)
+            !info.downloadUrl.endsWith(".apk") ->       // release has no APK file: only then use the browser
+                startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(info.downloadUrl)))
+            else -> vm.downloadUpdate(info)
+        }
+    }
+
+    /**
+     * Hands the downloaded APK to Android's installer ("Do you want to update this app?").
+     * The first time, Android needs "Allow from this source" for i: we open that switch and continue in onResume.
+     */
+    private fun installApk(apk: java.io.File) {
+        if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
+            waitingForInstallPermission = true
+            startActivity(Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, android.net.Uri.parse("package:$packageName")))
+            return
+        }
+        val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.files", apk)
+        startActivity(Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, "application/vnd.android.package-archive")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
     override fun onResume() {
         super.onResume()
+        if (waitingForInstallPermission) {
+            waitingForInstallPermission = false
+            val d = vm.download.value
+            if (d is DownloadState.Ready && (Build.VERSION.SDK_INT < 26 || packageManager.canRequestPackageInstalls())) installApk(d.apk)
+        }
         web.evaluateJavascript("window.iRefresh && window.iRefresh()", null)
     }
 

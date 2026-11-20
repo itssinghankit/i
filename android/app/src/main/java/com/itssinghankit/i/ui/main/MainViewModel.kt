@@ -29,6 +29,14 @@ data class MainUiState(
     val update: UpdateInfo? = null,     // offer "New version …"
 )
 data class LoadRequest(val id: Long, val url: String)
+
+/** In-app update download. */
+sealed interface DownloadState {
+    data object Idle : DownloadState
+    data class Downloading(val percent: Int) : DownloadState
+    data class Ready(val apk: java.io.File) : DownloadState       // hand it to Android's installer
+    data class Failed(val message: String) : DownloadState
+}
 data class LoadError(val url: String, val reason: String)
 
 /**
@@ -46,6 +54,21 @@ class MainViewModel(
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MainUiState())
+
+    private val _download = MutableStateFlow<DownloadState>(DownloadState.Idle)
+    val download: StateFlow<DownloadState> = _download.asStateFlow()
+
+    /** "Update now": download the APK inside the app (no browser), then the View opens the installer. */
+    fun downloadUpdate(info: UpdateInfo) {
+        if (_download.value is DownloadState.Downloading) return
+        _download.value = DownloadState.Downloading(0)
+        viewModelScope.launch {
+            _download.value = withContext(Dispatchers.IO) {
+                runCatching { updates.download(info) { p -> _download.value = DownloadState.Downloading(p) } }
+                    .fold({ DownloadState.Ready(it) }, { DownloadState.Failed(it.message ?: "Download failed. Check your internet.") })
+            }
+        }
+    }
     val state: StateFlow<MainUiState> = _state.asStateFlow()
 
     /** Ask the View to check whether the page has drawn (it owns the WebView). */
@@ -123,7 +146,8 @@ class MainViewModel(
     /** Debug builds: show the update sheet with sample data, to check how it looks. */
     fun previewUpdate() {
         _state.value = _state.value.copy(update = UpdateInfo(
-            version = "1.0.3", currentVersion = BuildConfig.VERSION_NAME, downloadUrl = "https://github.com/itssinghankit/i/releases",
+            version = "1.0.5", currentVersion = BuildConfig.VERSION_NAME,
+            downloadUrl = "https://github.com/itssinghankit/i/releases/download/v1.0.5/i-v1.0.5.apk",
             notes = listOf("New Learnings tab with your own categories", "Widget: Routine and To-do tabs", "Smoother tab switching"),
             sizeBytes = 4_640_175,
         ))

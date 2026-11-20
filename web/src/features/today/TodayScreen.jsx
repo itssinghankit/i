@@ -61,17 +61,12 @@ export default memo(function Home({ date, setDate, refreshKey, openWeekly, openA
   };
 
   const isToday = date === todayKey();
-  const hour = new Date().getHours();
-  const hello = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   return (
     <div>
       {/* Top bar */}
       <div className="between" style={{ marginBottom: 16 }}>
-        <div>
-          <div className="small muted bold">{hello} 👋</div>
-          <h1>Let’s grow <span className="grad-text">1%</span> today</h1>
-        </div>
+        <h1>Let’s grow <span className="grad-text">1%</span> today</h1>
         <motion.button className="icon-btn" style={{ width: 46, height: 46, background: 'var(--grad)', border: 0, color: '#fff', boxShadow: '0 8px 20px rgba(124,58,237,.35)' }}
           whileTap={{ scale: 0.88 }} onClick={() => setChartOpen(true)} aria-label="Weekly chart">
           <ChartColumnBig size={20} />
@@ -228,7 +223,7 @@ export default memo(function Home({ date, setDate, refreshKey, openWeekly, openA
       )}
 
       <CalendarSheet open={calOpen} onClose={() => setCalOpen(false)} value={date} onPick={(d) => { setCalOpen(false); jump(d); }} />
-      <WeekChartSheet open={chartOpen} onClose={() => setChartOpen(false)} anchor={date} onPickDay={(d) => { setChartOpen(false); jump(d); }} />
+      <WeekChartSheet open={chartOpen} onClose={() => setChartOpen(false)} anchor={todayKey()} onPickDay={(d) => { setChartOpen(false); jump(d); }} />
     </div>
   );
 });
