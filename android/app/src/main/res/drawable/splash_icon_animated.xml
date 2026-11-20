@@ -1,68 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Splash animation (about 1 s):
-     1. a soft ring draws itself around the centre,
-     2. the stem of the "i" grows up from the bottom,
-     3. the dot drops in and bounces.
-     Uses the same 108 x 108 grid as the launcher icon. -->
+<!-- Splash animation (about 1 s): the three bars grow up one after another (growth),
+     then the sparkle (the dot of the "i") pops in and turns. Same drawing as the launcher icon. -->
 <animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt">
-
     <aapt:attr name="android:drawable">
-        <vector
-            android:width="108dp" android:height="108dp"
-            android:viewportWidth="108" android:viewportHeight="108">
-
-            <path
-                android:name="ring"
-                android:pathData="M54,22 a32,32 0 1,1 -0.01,0"
-                android:strokeColor="#FFF9A8D4"
-                android:strokeWidth="3.5"
-                android:strokeLineCap="round"
-                android:trimPathEnd="0" />
-
-            <group android:name="stem" android:pivotX="54" android:pivotY="78" android:scaleY="0">
-                <path android:fillColor="#FFFFFFFF" android:pathData="M48,44h12v34a6,6 0,0 1,-12 0z" />
+        <vector android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+            <group android:name="bar1" android:pivotX="37.5" android:pivotY="79" android:scaleY="0">
+                <path android:fillColor="#73FFFFFF" android:pathData="M37.5,62h0a5.5,5.5 0,0 1,5.5 5.5v6a5.5,5.5 0,0 1,-11 0v-6a5.5,5.5 0,0 1,5.5 -5.5z" />
             </group>
-
-            <group android:name="dot" android:translateY="-46">
-                <path android:fillColor="#FFFFFFFF"
-                    android:pathData="M54,30m-6.5,0a6.5,6.5 0,1 1,13 0a6.5,6.5 0,1 1,-13 0" />
+            <group android:name="bar2" android:pivotX="52.5" android:pivotY="79" android:scaleY="0">
+                <path android:fillColor="#B3FFFFFF" android:pathData="M52.5,53h0a5.5,5.5 0,0 1,5.5 5.5v15a5.5,5.5 0,0 1,-11 0v-15a5.5,5.5 0,0 1,5.5 -5.5z" />
+            </group>
+            <group android:name="bar3" android:pivotX="68" android:pivotY="79" android:scaleY="0">
+                <path android:fillColor="#FFFFFFFF" android:pathData="M68,45h0a6,6 0,0 1,6 6v22a6,6 0,0 1,-12 0v-22a6,6 0,0 1,6 -6z" />
+            </group>
+            <group android:name="spark" android:pivotX="68" android:pivotY="31" android:scaleX="0" android:scaleY="0">
+                <path android:fillColor="#FFFFFFFF" android:pathData="M68,21 Q68,31 78,31 Q68,31 68,41 Q68,31 58,31 Q68,31 68,21 Z" />
             </group>
         </vector>
     </aapt:attr>
-
-    <target android:name="ring">
+    <target android:name="bar1">
         <aapt:attr name="android:animation">
-            <objectAnimator
-                android:propertyName="trimPathEnd"
-                android:duration="700"
-                android:valueFrom="0" android:valueTo="1"
-                android:valueType="floatType"
-                android:interpolator="@android:interpolator/fast_out_slow_in" />
-        </aapt:attr>
-    </target>
-
-    <target android:name="stem">
-        <aapt:attr name="android:animation">
-            <objectAnimator
-                android:propertyName="scaleY"
-                android:startOffset="150"
-                android:duration="450"
-                android:valueFrom="0" android:valueTo="1"
-                android:valueType="floatType"
+            <objectAnimator android:propertyName="scaleY" android:startOffset="0" android:duration="380"
+                android:valueFrom="0" android:valueTo="1" android:valueType="floatType"
                 android:interpolator="@android:interpolator/overshoot" />
         </aapt:attr>
     </target>
-
-    <target android:name="dot">
+    <target android:name="bar2">
         <aapt:attr name="android:animation">
-            <objectAnimator
-                android:propertyName="translateY"
-                android:startOffset="450"
-                android:duration="550"
-                android:valueFrom="-46" android:valueTo="0"
-                android:valueType="floatType"
-                android:interpolator="@android:interpolator/bounce" />
+            <objectAnimator android:propertyName="scaleY" android:startOffset="140" android:duration="380"
+                android:valueFrom="0" android:valueTo="1" android:valueType="floatType"
+                android:interpolator="@android:interpolator/overshoot" />
+        </aapt:attr>
+    </target>
+    <target android:name="bar3">
+        <aapt:attr name="android:animation">
+            <objectAnimator android:propertyName="scaleY" android:startOffset="280" android:duration="380"
+                android:valueFrom="0" android:valueTo="1" android:valueType="floatType"
+                android:interpolator="@android:interpolator/overshoot" />
+        </aapt:attr>
+    </target>
+    <target android:name="spark">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator android:propertyName="scaleX" android:startOffset="560" android:duration="420"
+                    android:valueFrom="0" android:valueTo="1" android:valueType="floatType" android:interpolator="@android:interpolator/overshoot" />
+                <objectAnimator android:propertyName="scaleY" android:startOffset="560" android:duration="420"
+                    android:valueFrom="0" android:valueTo="1" android:valueType="floatType" android:interpolator="@android:interpolator/overshoot" />
+                <objectAnimator android:propertyName="rotation" android:startOffset="560" android:duration="440"
+                    android:valueFrom="-90" android:valueTo="0" android:valueType="floatType" android:interpolator="@android:interpolator/fast_out_slow_in" />
+            </set>
         </aapt:attr>
     </target>
 </animated-vector>

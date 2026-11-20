@@ -6,6 +6,6 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "dev": "npm run build --prefix web && npm start --prefix server",
-    "test": "node --test server/test/*.test.js"
+    "test": "node --test --test-concurrency=1 server/test/*.test.js"
   }
 }

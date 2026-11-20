@@ -34,7 +34,7 @@ class TodayWidgetService : RemoteViewsService() {
 
         override fun onDataSetChanged() {
             lines = try {
-                val t = WidgetApi.today()
+                val t = WidgetApi.today(context)
                 date = t.date
                 val routineLeft = t.routine.count { !it.done }
                 buildList {
@@ -43,6 +43,8 @@ class TodayWidgetService : RemoteViewsService() {
                     add(Line.Header("TO-DO · ${t.todos.count { !it.done }} left"))
                     t.todos.forEach { add(Line.Item(it)) }
                 }
+            } catch (_: WidgetApi.SignedOut) {
+                listOf(Line.Header("Open i and sign in with Google to see your day."))
             } catch (_: Exception) {
                 listOf(Line.Header("Can't reach the server. Open the app to retry."))
             }

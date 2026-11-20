@@ -1,0 +1,10 @@
+{
+  "name": "i",
+  "short_name": "i",
+  "description": "Grow 1% every day: routine, habits and goals.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f6fc",
+  "theme_color": "#7c3aed",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

@@ -25,7 +25,11 @@ export function progressService(store) {
   // Percent for a date, using that date's own routine.
   const percentOn = async (date, all) => pctFor(await getDay(date), await routineFor(date, all));
 
-  const getSettings = async () => ({ sleepHours: 8, ...(await store.findOne('settings', { _id: 'main' })) });
+  // One settings row per person (name 'main'); older single-user data used _id 'main'.
+  const getSettings = async () => {
+    const row = (await store.findOne('settings', { name: 'main' })) || (await store.findOne('settings', { _id: 'main' }));
+    return { sleepHours: row?.sleepHours ?? 8 };
+  };
 
   // Does everything planned for the day fit in the waking hours?
   // To-dos that sit under a routine item (e.g. Office work) don't add time: that item's time already covers them.

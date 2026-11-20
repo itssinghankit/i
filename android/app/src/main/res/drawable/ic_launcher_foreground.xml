@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A white lowercase "i": a dot and a stem -->
+<!-- Launcher icon: three rising bars, the tallest is the "i", its dot is a sparkle. Background: gradient tile. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FFFFFF" android:pathData="M54,30m-6.5,0a6.5,6.5 0,1 1,13 0a6.5,6.5 0,1 1,-13 0" />
-    <path android:fillColor="#FFFFFF" android:pathData="M48,44h12v34a6,6 0,0 1,-12 0z" />
+    <path android:fillColor="#73FFFFFF" android:pathData="M37.5,62h0a5.5,5.5 0,0 1,5.5 5.5v6a5.5,5.5 0,0 1,-11 0v-6a5.5,5.5 0,0 1,5.5 -5.5z" />
+    <path android:fillColor="#B3FFFFFF" android:pathData="M52.5,53h0a5.5,5.5 0,0 1,5.5 5.5v15a5.5,5.5 0,0 1,-11 0v-15a5.5,5.5 0,0 1,5.5 -5.5z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M68,45h0a6,6 0,0 1,6 6v22a6,6 0,0 1,-12 0v-22a6,6 0,0 1,6 -6z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M68,21 Q68,31 78,31 Q68,31 68,41 Q68,31 58,31 Q68,31 68,21 Z" />
 </vector>

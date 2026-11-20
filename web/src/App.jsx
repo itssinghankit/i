@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sun, Repeat, Flag, Ellipsis, Sprout, X, Scale, Rocket, Lightbulb, GraduationCap, RotateCcw } from 'lucide-react';
+import { Sun, Repeat, Flag, Ellipsis, Sprout, X, LogOut, Scale, Rocket, Lightbulb, GraduationCap, RotateCcw } from 'lucide-react';
 import { api, todayKey, addDays, fmt, buzz, mins } from './api';
 import { Sheet, spring, soft, useToast, EMOJIS, TimePicker } from './ui';
 import Home from './screens/Home';
@@ -20,7 +20,7 @@ const MORE = [
 ];
 const ORDER = ['home', 'routine', 'resolutions', 'needs', 'wantToBe', 'insights'];
 
-export default function App() {
+export default function App({ user = null, onSignOut = null }) {
   const [screen, setScreen] = useState('home');
   const [prev, setPrev] = useState('home');
   const [menu, setMenu] = useState(false);
@@ -105,6 +105,15 @@ export default function App() {
           <>
             <motion.div className="scrim" onClick={() => setMenu(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
             <motion.div className="menu" initial={{ opacity: 0, scale: 0.6, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.7, y: 20 }} transition={spring}>
+              {user && (
+                <div className="account">
+                  {user.picture ? <img src={user.picture} alt="" referrerPolicy="no-referrer" /> : <span className="avatar">{(user.name || '?')[0]}</span>}
+                  <div style={{ minWidth: 0 }}>
+                    <div className="bold" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</div>
+                    <div className="tiny faint" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
+                  </div>
+                </div>
+              )}
               {MORE.map((m, i) => (
                 <motion.button key={m.id} onClick={() => open(m.id)} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.04 * i }}>
                   <m.icon size={21} strokeWidth={1.7} color="#5d5b6b" /> {m.label}
@@ -117,6 +126,11 @@ export default function App() {
               <motion.button onClick={async () => { await api.post('/reset'); setMenu(false); refresh(); setToast('Demo data restored'); open('home'); }} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.16 }}>
                 <RotateCcw size={21} strokeWidth={1.7} color="#5d5b6b" /> Reset demo data
               </motion.button>
+              )}
+              {onSignOut && (
+                <motion.button onClick={() => { setMenu(false); onSignOut(); }} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} style={{ color: '#e11d48' }}>
+                  <LogOut size={21} strokeWidth={1.7} /> Sign out
+                </motion.button>
               )}
               <div className="between" style={{ padding: '4px 4px 0 14px' }}>
                 <span className="tiny faint">i · by itssinghankit</span>

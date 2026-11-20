@@ -13,6 +13,9 @@ import { todosModule, resolutionsModule, needsWantsModule, routineModule, wantTo
 import { weeklyHabitsModule } from './modules/weeklyHabits.js';
 import { insightsModule } from './modules/insights.js';
 import { widgetModule } from './modules/widget.js';
+import { authModule, requireUser } from './modules/auth.js';
+import { scopedStore } from './db/scoped.js';
+import { googleVerifier } from './auth/google.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -28,15 +31,24 @@ const MODULES = [
   ['/widget', widgetModule],
 ];
 
-export function createApp(store) {
-  const ctx = { store, progress: progressService(store) };
+// options.verifyGoogleToken lets tests replace the real Google check.
+export function createApp(baseStore, options = {}) {
+  if (config.authRequired && config.sessionSecret.length < 32) {
+    throw new Error('SESSION_SECRET must be set (32+ characters) when GOOGLE_CLIENT_ID is set');
+  }
+  // Every feature sees only the signed-in person's data (see db/scoped.js).
+  const store = scopedStore(baseStore);
+  const verifyGoogleToken = options.verifyGoogleToken || (config.authRequired ? googleVerifier(config.googleClientIds) : null);
+  const ctx = { store, config, verifyGoogleToken, progress: progressService(store) };
   const app = express();
   app.use(cors(config.corsOrigins.length ? { origin: config.corsOrigins } : undefined));
   app.use(express.json({ limit: '100kb' }));
 
   const api = express.Router();
-  api.get('/health', (req, res) => res.json({ ok: true, store: store.kind(), canReset: config.allowReset }));
+  api.get('/health', (req, res) => res.json({ ok: true, store: store.kind(), canReset: config.allowReset, authRequired: config.authRequired }));
   if (config.apiKey) api.use((req, res, next) => (req.get('x-api-key') === config.apiKey ? next() : res.status(401).json({ error: 'bad api key' })));
+  api.use('/auth', authModule(ctx));     // open: sign-in itself
+  api.use(requireUser(config));          // everything below needs a signed-in user (when sign-in is on)
   for (const [mount, mod] of MODULES) api.use(mount, mod(ctx));
   api.post('/reset', async (req, res, next) => {
     if (!config.allowReset) return res.status(403).json({ error: 'reset is turned off on this server' });

@@ -47,8 +47,13 @@ class FileStore {
     this.data[name] = this.col(name).filter((x) => !matches(x, filter));
     this.save(); return before - this.data[name].length;
   }
-  async count(name) { return this.col(name).length; }
+  async count(name, filter = {}) { return this.col(name).filter((d) => matches(d, filter)).length; }
   async wipe() { this.data = {}; this.save(); }
+  // Gives data saved before sign-in existed (no userId) to the first user who signs in.
+  async claimOrphans(userId) {
+    for (const n of COLLECTIONS) this.col(n).filter((d) => !d.userId).forEach((d) => { d.userId = userId; if (n === 'settings') d.name = 'main'; });
+    this.save();
+  }
 }
 
 class MongoStore {
@@ -69,21 +74,30 @@ class MongoStore {
     return this.c(name).findOneAndUpdate(filter, update, { upsert: true, returnDocument: 'after' });
   }
   async remove(name, filter) { return (await this.c(name).deleteMany(filter)).deletedCount; }
-  async count(name) { return this.c(name).countDocuments(); }
+  async count(name, filter = {}) { return this.c(name).countDocuments(filter); }
   // Clears this app's collections only (a normal database user can't drop a whole database).
   async wipe() { await Promise.all(COLLECTIONS.map((n) => this.c(n).deleteMany({}))); }
-  // Indexes keep the common lookups fast; creating an existing index again is a no-op.
+  async claimOrphans(userId) {
+    await Promise.all(COLLECTIONS.map((n) => this.c(n).updateMany({ userId: { $exists: false } }, { $set: n === 'settings' ? { userId, name: 'main' } : { userId } })));
+  }
+  // Indexes keep the common lookups fast. Every lookup is per user (userId first).
   async ensureIndexes() {
+    // Older single-user indexes made "date" unique across everyone; remove them if they exist.
+    await Promise.all([['days', 'date_1'], ['weeklyHabits', 'weekStart_1'], ['todos', 'date_1'], ['resolutions', 'year_1']]
+      .map(([c, i]) => this.c(c).dropIndex(i).catch(() => {})));
     await Promise.all([
-      this.c('days').createIndex({ date: 1 }, { unique: true }),
-      this.c('todos').createIndex({ date: 1 }),
-      this.c('weeklyHabits').createIndex({ weekStart: 1 }, { unique: true }),
-      this.c('resolutions').createIndex({ year: 1 }),
+      this.c('days').createIndex({ userId: 1, date: 1 }, { unique: true }),
+      this.c('todos').createIndex({ userId: 1, date: 1 }),
+      this.c('weeklyHabits').createIndex({ userId: 1, weekStart: 1 }, { unique: true }),
+      this.c('resolutions').createIndex({ userId: 1, year: 1 }),
+      this.c('routine').createIndex({ userId: 1 }),
+      this.c('users').createIndex({ googleSub: 1 }, { unique: true }),
     ]);
   }
 }
 
-const COLLECTIONS = ['routine', 'days', 'todos', 'weeklyHabits', 'wantToBe', 'resolutions', 'needsWants', 'settings'];
+// Collections that hold one person's data. "users" is shared and never scoped.
+export const COLLECTIONS = ['routine', 'days', 'todos', 'weeklyHabits', 'wantToBe', 'resolutions', 'needsWants', 'settings'];
 
 // One shared store per process. On Vercel a warm function reuses it, so it doesn't reconnect on every request.
 let storePromise = null;

@@ -69,7 +69,8 @@ export function daysModule({ store, progress }) {
   r.get('/settings', wrap(async (req, res) => res.json(await progress.getSettings())));
   r.patch('/settings', wrap(async (req, res) => {
     const sleepHours = Math.min(14, Math.max(4, Number(req.body.sleepHours) || 8));
-    res.json(await store.upsert('settings', { _id: 'main' }, { sleepHours }));
+    await store.upsert('settings', { name: 'main' }, { sleepHours });
+    res.json(await progress.getSettings());
   }));
 
   return r;

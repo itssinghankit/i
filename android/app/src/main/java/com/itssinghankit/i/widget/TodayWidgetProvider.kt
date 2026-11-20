@@ -29,15 +29,17 @@ class TodayWidgetProvider : AppWidgetProvider() {
         val pending = goAsync()
         Thread {
             try {
-                WidgetApi.toggle(
-                    intent.getStringExtra(EXTRA_KIND) ?: return@Thread,
-                    intent.getStringExtra(EXTRA_ID) ?: return@Thread,
-                    intent.getStringExtra(EXTRA_DATE) ?: "",
-                    intent.getBooleanExtra(EXTRA_DONE, false),
-                )
-            } catch (_: Exception) { /* offline: the list just stays as it was */ }
-            refreshAll(context)
-            pending.finish()
+                val kind = intent.getStringExtra(EXTRA_KIND)
+                val id = intent.getStringExtra(EXTRA_ID)
+                if (kind != null && id != null) {
+                    WidgetApi.toggle(context, kind, id, intent.getStringExtra(EXTRA_DATE) ?: "", intent.getBooleanExtra(EXTRA_DONE, false))
+                }
+            } catch (_: Exception) {
+                /* offline or signed out: the list just stays as it was */
+            } finally {
+                refreshAll(context)
+                pending.finish() // always tell Android we're done, or it may kill the app
+            }
         }.start()
     }
 

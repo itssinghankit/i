@@ -8,6 +8,8 @@ val versionNameFromEnv = (System.getenv("APP_VERSION") ?: "1.0.0").removePrefix(
 val versionCodeFromName = versionNameFromEnv.split(".").map { it.toIntOrNull() ?: 0 }
     .let { (it + listOf(0, 0, 0)).take(3) }.let { it[0] * 10000 + it[1] * 100 + it[2] }
 
+fun prop(name: String): String = (project.findProperty(name) as String?) ?: ""
+
 android {
     namespace = "com.itssinghankit.i"
     compileSdk = 35
@@ -18,8 +20,8 @@ android {
         targetSdk = 35
         versionCode = maxOf(1, versionCodeFromName)
         versionName = versionNameFromEnv
-        buildConfigField("String", "APP_URL", "\"${project.findProperty("I_APP_URL")}\"")
-        buildConfigField("String", "GITHUB_REPO", "\"${project.findProperty("I_GITHUB_REPO")}\"")
+        buildConfigField("String", "GITHUB_REPO", "\"${prop("I_GITHUB_REPO")}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${prop("I_GOOGLE_WEB_CLIENT_ID")}\"")
     }
 
     // Release signing reads from env vars (set as GitHub Actions secrets).
@@ -35,8 +37,14 @@ android {
         }
     }
 
+    // Which server each build talks to (see gradle.properties):
+    //   debug   → I_DEV_URL (your Mac)       release → I_APP_URL (Vercel)
     buildTypes {
+        debug {
+            buildConfigField("String", "APP_URL", "\"${prop("I_DEV_URL")}\"")
+        }
         release {
+            buildConfigField("String", "APP_URL", "\"${prop("I_APP_URL")}\"")
             isMinifyEnabled = false
             // With your key: a proper signed release. Without it: signed with the debug key so it still installs.
             signingConfig = if (System.getenv("I_KEYSTORE_PATH") != null) signingConfigs.getByName("release")
@@ -57,4 +65,9 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.webkit:webkit:1.12.1")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    // Google sign-in through Android's Credential Manager (the native account sheet)
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 }

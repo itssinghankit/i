@@ -20,16 +20,25 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import org.json.JSONObject
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.itssinghankit.i.widget.TodayWidgetProvider
 
 /**
  * The whole UI is the React app, shown in a WebView.
- * Native parts: the home-screen widget, deep links from it (#add-todo), and the GitHub update check.
+ * Native parts: the home-screen widget, deep links from it (#add-todo), the GitHub update check,
+ * and Google sign-in (Google blocks its sign-in page inside WebViews, so it runs natively here).
+ *
+ * Which server it loads: BuildConfig.APP_URL, set per build type in app/build.gradle.kts
+ * from android/gradle.properties (debug → I_DEV_URL, release → I_APP_URL).
  */
 class MainActivity : AppCompatActivity() {
     private lateinit var web: WebView
     @Volatile private var pageReady = false
+    // The page currently shown; the bridge only trusts pages from our own server.
+    @Volatile private var pageUrl = ""
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,7 +73,7 @@ class MainActivity : AppCompatActivity() {
             overScrollMode = WebView.OVER_SCROLL_NEVER
             addJavascriptInterface(Bridge(), "Android")
             webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView, url: String) { pageReady = true }
+                override fun onPageFinished(view: WebView, url: String) { pageReady = true; pageUrl = url }
                 // Links to other sites open in the browser, not inside the app.
                 override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean {
                     if (req.url.toString().startsWith(BuildConfig.APP_URL)) return false
@@ -108,10 +117,44 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    /** Called from JavaScript as window.Android.refreshWidget() after every change. */
+    private fun trusted() = pageUrl.startsWith(BuildConfig.APP_URL)
+
+    /** Sends a value into the page as a JavaScript string, safely quoted. */
+    private fun callJs(fn: String, value: String?) {
+        val arg = if (value == null) "null" else JSONObject.quote(value)
+        runOnUiThread { web.evaluateJavascript("window.$fn && window.$fn($arg)", null) }
+    }
+
+    /** Functions the web app can call as window.Android.<name>(). */
     inner class Bridge {
         @JavascriptInterface fun refreshWidget() = TodayWidgetProvider.refreshAll(this@MainActivity)
         @JavascriptInterface fun appVersion(): String = BuildConfig.VERSION_NAME
+
+        /** Opens the Google account sheet; the result goes back to window.onNativeGoogleCredential / onNativeGoogleError. */
+        @JavascriptInterface fun googleSignIn() {
+            if (!trusted()) return
+            lifecycleScope.launch {
+                when (val r = GoogleSignIn.signIn(this@MainActivity)) {
+                    is GoogleSignIn.Result.Success -> callJs("onNativeGoogleCredential", r.idToken)
+                    is GoogleSignIn.Result.Failure -> callJs("onNativeGoogleError", r.message)
+                    GoogleSignIn.Result.Cancelled -> callJs("onNativeGoogleError", null)
+                }
+            }
+        }
+
+        @JavascriptInterface fun googleSignOut() { lifecycleScope.launch { GoogleSignIn.signOut(this@MainActivity) } }
+
+        /** Saves the login token for the widget, then refreshes it. */
+        @JavascriptInterface fun setSession(token: String) {
+            if (!trusted()) return
+            SessionStore.set(this@MainActivity, token)
+            TodayWidgetProvider.refreshAll(this@MainActivity)
+        }
+
+        @JavascriptInterface fun clearSession() {
+            SessionStore.clear(this@MainActivity)
+            TodayWidgetProvider.refreshAll(this@MainActivity)
+        }
     }
 
     companion object {

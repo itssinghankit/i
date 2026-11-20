@@ -107,9 +107,9 @@ export default function Routine({ onChanged }) {
 
       <div className="section-label">{shown.length} items on {DAY_SHORT[day]} · drag ⋮⋮ to reorder</div>
       {items && shown.length === 0 && <Empty emoji="🌱" text={`Nothing on ${DAY_SHORT[day]} yet. Add with +`} />}
-      <AnimatePresence mode="wait">
-        {items && shown.length > 0 && (
-          <motion.div key={day} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.18 }}>
+      {/* New list fades in right away when you switch day (no waiting for the old one to leave). */}
+      {items && shown.length > 0 && (
+          <motion.div key={day} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
             <Reorder.Group axis="y" values={shown} onReorder={reorder} className="card list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {shown.map((r) => (
                 <Reorder.Item key={r._id} value={r} className="item" onDragEnd={commitOrder} whileDrag={{ scale: 1.03, boxShadow: '0 12px 30px rgba(0,0,0,.15)', zIndex: 5 }}>
@@ -125,7 +125,6 @@ export default function Routine({ onChanged }) {
             </Reorder.Group>
           </motion.div>
         )}
-      </AnimatePresence>
 
       <RoutineEditor item={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load(); onChanged?.(); }} />
     </div>

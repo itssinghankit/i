@@ -1,29 +1,39 @@
 package com.itssinghankit.i.widget
 
+import android.content.Context
 import com.itssinghankit.i.BuildConfig
+import com.itssinghankit.i.SessionStore
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Network calls used by the widget. Always call from a background thread. */
+/**
+ * Network calls used by the widget. Always call from a background thread.
+ * Server: BuildConfig.APP_URL (debug → your Mac, release → Vercel). Sends the saved login token.
+ */
 object WidgetApi {
+    /** Thrown when nobody is signed in on this phone, or the login expired. */
+    class SignedOut : Exception("sign in required")
+
     data class Row(val kind: String, val id: String, val title: String, val minutes: Int, val done: Boolean)
     data class Today(val date: String, val percent: Int, val routine: List<Row>, val todos: List<Row>)
 
-    private fun request(path: String, method: String = "GET", body: String? = null): String {
+    private fun request(context: Context, path: String, method: String = "GET", body: String? = null): String {
         val conn = URL("${BuildConfig.APP_URL}/api/v1$path").openConnection() as HttpURLConnection
         conn.requestMethod = method
         conn.connectTimeout = 6000; conn.readTimeout = 6000
+        SessionStore.get(context)?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
         if (body != null) {
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", "application/json")
             conn.outputStream.use { it.write(body.toByteArray()) }
         }
+        if (conn.responseCode == 401) throw SignedOut()
         return conn.inputStream.bufferedReader().use { it.readText() }
     }
 
-    fun today(): Today {
-        val j = JSONObject(request("/widget"))
+    fun today(context: Context): Today {
+        val j = JSONObject(request(context, "/widget"))
         val r = j.getJSONArray("routine"); val t = j.getJSONArray("todos")
         return Today(
             date = j.getString("date"),
@@ -37,8 +47,8 @@ object WidgetApi {
         )
     }
 
-    fun toggle(kind: String, id: String, date: String, done: Boolean) {
-        if (kind == "routine") request("/day/$date/toggle", "POST", JSONObject(mapOf("kind" to "routine", "id" to id)).toString())
-        else request("/todos/$id", "PATCH", JSONObject(mapOf("done" to !done)).toString())
+    fun toggle(context: Context, kind: String, id: String, date: String, done: Boolean) {
+        if (kind == "routine") request(context, "/day/$date/toggle", "POST", JSONObject(mapOf("kind" to "routine", "id" to id)).toString())
+        else request(context, "/todos/$id", "PATCH", JSONObject(mapOf("done" to !done)).toString())
     }
 }
