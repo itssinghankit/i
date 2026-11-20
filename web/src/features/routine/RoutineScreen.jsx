@@ -161,7 +161,8 @@ function RoutineEditor({ item, onClose, onSaved }) {
       <motion.div className="emoji" style={{ width: 64, height: 64, fontSize: 32, borderRadius: 20, margin: '0 auto', background: `${f.color}22` }}
         key={f.emoji + f.color} initial={{ scale: 0.6, rotate: -10 }} animate={{ scale: 1, rotate: 0 }} transition={soft}>{f.emoji}</motion.div>
       <label className="field-label">What do you do?</label>
-      <input className="input" data-autofocus placeholder="e.g. Office work" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
+      {/* Keyboard opens by itself only for a new habit; editing one usually means changing time or days */}
+      <input className="input" {...(isNew ? { 'data-autofocus': true } : {})} placeholder="e.g. Office work" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
 
       <label className="field-label">How long does it take?</label>
       <TimePicker value={Number(f.minutes) || 0} onChange={(m) => setF((x) => ({ ...x, minutes: m }))} presets={[10, 15, 30, 45, 60, 120]} max={18 * 60} />

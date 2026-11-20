@@ -207,6 +207,9 @@ h2 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; margin: 0; }
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 41; will-change: transform; contain: layout paint; background: var(--surface); border-radius: 30px 30px 0 0; padding: 10px calc(20px + var(--safe-r)) calc(24px + var(--safe-b)) calc(20px + var(--safe-l)); max-height: calc(88% - var(--safe-t) - var(--kb, 0px)); overflow-y: auto; box-shadow: 0 -10px 40px rgba(0,0,0,.12);
   /* Keyboard open (Android app sets --kb): the sheet rides on top of it. Only the sheet moves; the page keeps its size. */
   bottom: max(0px, calc(var(--kb, 0px) - var(--safe-b))); transition: bottom .24s cubic-bezier(.2,.8,.2,1), max-height .24s; }
+/* Newer Android app sends the keyboard height on every frame of the keyboard animation (data-kb-live):
+   follow it exactly, with no animation of our own (that lagged behind and looked like a jerk). */
+:root[data-kb-live] .sheet { transition: none; }
 .sheet .grab { width: 44px; height: 5px; border-radius: 9px; background: var(--grab); margin: 0 auto; }
 .sheet .grab-zone { padding: 6px 0 16px; margin: -10px -20px 0; touch-action: none; cursor: grab; }
 .sheet-scrim { z-index: 40; }

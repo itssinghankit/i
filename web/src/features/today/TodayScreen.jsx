@@ -192,7 +192,7 @@ export default memo(function Home({ date, setDate, refreshKey, openWeekly, openA
                                 <div className={`title ${r.done ? 'done' : ''}`}>{r.title}</div>
                                 {(r.time || r.holdsTodos) && (
                                   <div className="meta">
-                                    {r.time && <span>🕒 {clockTime(r.time, r.minutes)}</span>}
+                                    {r.time && <span>{clockTime(r.time, r.minutes)}</span>}
                                     {r.holdsTodos && <span>{inside.filter((t) => t.done).length}/{inside.length} tasks done</span>}
                                   </div>
                                 )}
@@ -204,12 +204,12 @@ export default memo(function Home({ date, setDate, refreshKey, openWeekly, openA
                               <div style={{ padding: '0 16px 12px 70px' }}>
                                 {inside.map((t) => (
                                   <div key={t._id} className="row" style={{ padding: '6px 0', gap: 10, opacity: t.noTime ? 0.55 : 1 }} onClick={() => toggleTodo(t)}>
-                                    <Check size={20} done={t.done} color={r.color} onToggle={() => toggleTodo(t)} />
-                                    <span style={{ minWidth: 0 }}>
+                                    <span style={{ minWidth: 0, flex: 1 }}>
                                       <span className={`small ${t.done ? 'faint' : ''}`} style={{ textDecoration: t.done ? 'line-through' : 'none', fontWeight: 500 }}>{t.title}</span>
                                       {t.time && <span className="tiny faint"> · {clockTime(t.time, t.minutes)}</span>}
                                       {t.noTime && <span className="no-time-msg" style={{ display: 'block' }}>Not enough time left in {r.title}</span>}
                                     </span>
+                                    <Check size={20} done={t.done} color={r.color} onToggle={() => toggleTodo(t)} />
                                   </div>
                                 ))}
                                 <button className="tiny bold row" style={{ gap: 4, color: r.color, marginTop: 4 }} onClick={(e) => { e.stopPropagation(); openAddTodo({ date, parentId: r._id }); }}>
@@ -249,18 +249,19 @@ export default memo(function Home({ date, setDate, refreshKey, openWeekly, openA
                                 {list.map((t, idx) => (
                                   <SwipeRow key={t._id} idx={idx} onDelete={() => removeTodo(t)}>
                                     <div className={`item ${t.noTime ? 'no-time' : ''}`} onClick={() => toggleTodo(t)} aria-disabled={t.noTime || undefined}>
-                                      <Check done={t.done} color={t.noTime ? '#9a98a8' : group?.color || '#22c55e'} onToggle={() => toggleTodo(t)} />
                                       <div style={{ flex: 1, minWidth: 0 }}>
                                         <div className={`title ${t.done ? 'done' : ''}`}>{t.title}</div>
                                         {(t.time || t.kind === 'always') && (
                                           <div className="meta">
-                                            {t.time && <span>🕒 {clockTime(t.time, t.minutes)}</span>}
+                                            {t.time && <span>{clockTime(t.time, t.minutes)}</span>}
                                             {t.kind === 'always' && <span className="badge-soft">All-time</span>}
                                           </div>
                                         )}
                                         {t.noTime && <div className="no-time-msg">You don’t have enough time for this today</div>}
                                       </div>
                                       {t.minutes > 0 && <span className="time-chip" style={{ background: 'var(--ok-bg)', color: 'var(--ok)' }}>{mins(t.minutes)}</span>}
+                                      {/* Tick on the right, like routine habits */}
+                                      <Check done={t.done} color={t.noTime ? '#9a98a8' : group?.color || '#22c55e'} onToggle={() => toggleTodo(t)} />
                                     </div>
                                   </SwipeRow>
                                 ))}

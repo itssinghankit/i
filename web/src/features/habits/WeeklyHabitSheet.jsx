@@ -29,8 +29,22 @@ export default function WeeklyHabitSheet({ open, onClose, onChanged, toast }) {
     await api.del(`/weeklyHabits/${h._id}`);
     buzz(15); toast?.('Habit of the week removed'); load(); onChanged();
   };
-  const toggleDay = async (d) => {
-    if (d.date > todayKey() || !d.runs) return;
+  // A "–" day is one this habit's routine item doesn't run on (e.g. Sunday). Tapping it turns that
+  // weekday on for the habit (it's added to the routine item's days), so it can be ticked from then on.
+  const enableDay = async (d, i) => {
+    const item = routine.find((r) => r._id === current?.routineId);
+    if (!item) return;
+    const ALL = [0, 1, 2, 3, 4, 5, 6];
+    const now = item.days?.length ? item.days : ALL;
+    const next = [...new Set([...now, i])].sort();
+    setDays((x) => x.map((y) => (y.date === d.date ? { ...y, runs: true } : y)));
+    await api.patch(`/routine/${item._id}`, { days: next });
+    buzz(20); toast?.(`${item.title} now also runs on ${fmt(d.date, { weekday: 'long' })}s`);
+    load(); onChanged();
+  };
+  const toggleDay = async (d, i) => {
+    if (!d.runs) return enableDay(d, i);
+    if (d.date > todayKey()) return;
     setDays((x) => x.map((y) => (y.date === d.date ? { ...y, done: !y.done } : y)));
     await api.post(`/day/${d.date}/toggle`, { kind: 'weekly' }); onChanged();
   };
@@ -46,13 +60,15 @@ export default function WeeklyHabitSheet({ open, onClose, onChanged, toast }) {
           <div className="h-title" style={{ fontSize: 22 }}>{current.emoji} {current.title}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6, marginTop: 14 }}>
             {days.map((d, i) => (
-              <motion.button key={d.date} onClick={() => toggleDay(d)} whileTap={{ scale: 0.85 }}
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: d.date > todayKey() || !d.runs ? 0.45 : 1, y: 0 }} transition={{ delay: i * 0.04 }}
+              <motion.button key={d.date} onClick={() => toggleDay(d, i)} whileTap={{ scale: 0.85 }}
+                aria-label={d.runs ? undefined : `Turn on ${fmt(d.date, { weekday: 'long' })}`}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: !d.runs ? 0.8 : d.date > todayKey() ? 0.45 : 1, y: 0 }} transition={{ delay: i * 0.04 }}
                 style={{ borderRadius: 12, padding: '8px 0', background: d.done ? '#fff' : 'rgba(255,255,255,.18)', color: d.done ? '#a21caf' : '#fff', fontWeight: 700, fontSize: 12 }}>
-                {fmt(d.date, { weekday: 'narrow' })}<div style={{ fontSize: 15 }}>{d.done ? '✓' : d.runs ? '·' : '–'}</div>
+                {fmt(d.date, { weekday: 'narrow' })}<div style={{ fontSize: 15 }}>{d.done ? '✓' : d.runs ? '·' : '+'}</div>
               </motion.button>
             ))}
           </div>
+          {days.some((d) => !d.runs) && <div className="tiny" style={{ opacity: 0.85, marginTop: 8 }}>+ = a day it’s off. Tap it to turn that day on.</div>}
           <div className="row" style={{ gap: 8, marginTop: 14 }}>
             <button className="ghost-btn" style={{ background: 'rgba(255,255,255,.22)', color: '#fff' }} onClick={() => setPicking(true)}>Change this week’s habit</button>
             <button className="ghost-btn row" style={{ background: 'rgba(255,255,255,.22)', color: '#fff', gap: 6 }} onClick={() => remove(current)}><Trash2 size={14} /> Delete</button>

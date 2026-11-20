@@ -24,6 +24,7 @@ import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -232,9 +233,39 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
             // The page keeps its full size when the keyboard opens (adjustNothing in the manifest), so nothing
             // re-lays out. The page only learns the keyboard height (--kb) and lifts the open sheet by that much.
             keyboard = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom / d
-            pushSafeArea()
+            if (!keyboardMoving) pushSafeArea()
             insets
         }
+        // While the keyboard slides in or out, send its height on every frame, so the open sheet rides up
+        // and down with it. (Before, the page only got the final height after the keyboard had finished,
+        // then moved the sheet on its own: the keyboard covered the sheet first and the sheet jumped after.)
+        ViewCompat.setWindowInsetsAnimationCallback(root, object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_STOP) {
+            override fun onPrepare(animation: WindowInsetsAnimationCompat) {
+                if (animation.typeMask and WindowInsetsCompat.Type.ime() != 0) keyboardMoving = true
+            }
+            override fun onProgress(insets: WindowInsetsCompat, running: MutableList<WindowInsetsAnimationCompat>): WindowInsetsCompat {
+                if (running.any { it.typeMask and WindowInsetsCompat.Type.ime() != 0 }) {
+                    pushKeyboard(insets.getInsets(WindowInsetsCompat.Type.ime()).bottom / resources.displayMetrics.density)
+                }
+                return insets
+            }
+            override fun onEnd(animation: WindowInsetsAnimationCompat) {
+                if (animation.typeMask and WindowInsetsCompat.Type.ime() == 0) return
+                keyboardMoving = false
+                ViewCompat.getRootWindowInsets(root)?.let { keyboard = it.getInsets(WindowInsetsCompat.Type.ime()).bottom / resources.displayMetrics.density }
+                pushSafeArea()
+            }
+        })
+    }
+
+    private var keyboardMoving = false
+    private var lastKbPushed = -1f
+
+    /** One frame of the keyboard animation: only --kb changes. data-kb-live tells the page not to add its own animation. */
+    private fun pushKeyboard(height: Float) {
+        if (!::web.isInitialized || height == lastKbPushed) return
+        lastKbPushed = height
+        web.evaluateJavascript("(function(d){d.dataset.kbLive='1';d.style.setProperty('--kb','${height}px')})(document.documentElement)", null)
     }
 
     private fun pushSafeArea() {
@@ -243,6 +274,7 @@ class MainActivity : AppCompatActivity(), WebAppBridge.Host {
         web.evaluateJavascript(
             "(function(s){s.setProperty('--safe-t','${t}px');s.setProperty('--safe-b','${b}px');" +
                 "s.setProperty('--safe-l','${l}px');s.setProperty('--safe-r','${r}px');s.setProperty('--kb','${keyboard}px')})(document.documentElement.style)", null)
+        lastKbPushed = keyboard
     }
 
     /** Sends a value into the page as a JavaScript string, safely quoted. */
