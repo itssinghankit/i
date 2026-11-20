@@ -44,12 +44,29 @@
         </LinearLayout>
     </LinearLayout>
 
-    <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
-        <ListView android:id="@+id/widget_list"
-            android:layout_width="match_parent" android:layout_height="match_parent"
-            android:divider="@null" android:paddingTop="6dp" android:paddingBottom="10dp" android:clipToPadding="false" />
-        <TextView android:id="@+id/widget_empty"
-            android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center"
-            android:text="Loading your day…" android:textColor="@color/widget_ink3" android:textSize="13sp" />
-    </FrameLayout>
+    <!-- Two lists, one per tab. Switching tabs flips between them with a short fade + slide (widget_tab_in/out);
+         rows slide in one after another when a list appears (widget_rows). -->
+    <ViewFlipper android:id="@+id/widget_flipper"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:animateFirstView="false"
+        android:inAnimation="@anim/widget_tab_in" android:outAnimation="@anim/widget_tab_out">
+        <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
+            <ListView android:id="@+id/widget_list"
+                android:layout_width="match_parent" android:layout_height="match_parent"
+                android:divider="@null" android:paddingTop="6dp" android:paddingBottom="10dp" android:clipToPadding="false"
+                android:layoutAnimation="@anim/widget_rows" />
+            <TextView android:id="@+id/widget_empty"
+                android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center"
+                android:text="Loading your day…" android:textColor="@color/widget_ink3" android:textSize="13sp" />
+        </FrameLayout>
+        <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
+            <ListView android:id="@+id/widget_list_todo"
+                android:layout_width="match_parent" android:layout_height="match_parent"
+                android:divider="@null" android:paddingTop="6dp" android:paddingBottom="10dp" android:clipToPadding="false"
+                android:layoutAnimation="@anim/widget_rows" />
+            <TextView android:id="@+id/widget_empty_todo"
+                android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center"
+                android:text="Loading your to-dos…" android:textColor="@color/widget_ink3" android:textSize="13sp" />
+        </FrameLayout>
+    </ViewFlipper>
 </LinearLayout>

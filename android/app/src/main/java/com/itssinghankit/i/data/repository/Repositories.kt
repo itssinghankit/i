@@ -36,7 +36,8 @@ class TodayRepository(private val api: ApiClient) {
 
     fun toggle(kind: String, id: String, date: String, done: Boolean) {
         if (kind == "routine") api.post("/day/$date/toggle", JSONObject(mapOf("kind" to "routine", "id" to id)).toString())
-        else api.patch("/todos/$id", JSONObject(mapOf("done" to !done)).toString())
+        // Ticking also sends the day, so an all-time to-do knows which day it was done on.
+        else api.patch("/todos/$id", JSONObject(if (done) mapOf("done" to false) else mapOf("done" to true, "doneOn" to date)).toString())
     }
 }
 

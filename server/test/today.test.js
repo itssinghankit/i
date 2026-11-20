@@ -181,3 +181,18 @@ test('taps save only the tick; the nightly job saves the day and fills in missed
   // A day row made by the nightly save still reads as "nothing ticked".
   assert.equal((await day(night)).percent, 0);
 });
+
+test('widget: lists all-time to-dos too, and gives the To-do tab its own %', async () => {
+  const a = (await call('POST', '/todos', { title: 'Widget all-time', date: addDays(t, -2), kind: 'always', minutes: 0 })).body;
+  const b = (await call('POST', '/todos', { title: 'Widget daily', date: t, minutes: 0 })).body;
+  let w = (await call('GET', '/widget')).body;
+  assert.ok(w.todos.some((x) => x.id === a._id && x.kind === 'always'), 'an all-time to-do from 2 days ago shows today');
+  const pct = () => Math.round((w.todos.filter((x) => x.done).length / w.todos.length) * 100);
+  assert.equal(w.todoPercent, pct());
+  // Ticked from the widget (sends doneOn): counts as done today.
+  await call('PATCH', `/todos/${a._id}`, { done: true, doneOn: t });
+  w = (await call('GET', '/widget')).body;
+  assert.equal(w.todos.find((x) => x.id === a._id).done, true);
+  assert.equal(w.todoPercent, pct());
+  await call('DELETE', `/todos/${a._id}`); await call('DELETE', `/todos/${b._id}`);
+});

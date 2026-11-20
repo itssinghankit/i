@@ -4,8 +4,8 @@ import { api, todayKey, addDays, fmt, buzz, mins } from '../../lib';
 import { Sheet, TimePicker, TimeOfDay } from '../../components';
 
 // New to-do.
-//   When:  Today / Tomorrow / the day you were looking at
 //   Type:  Just this day (daily, default) or All-time (shows every day until you tick it)
+//   When:  Today / Tomorrow / the day you were looking at. Hidden for All-time: it starts today and repeats anyway.
 //   Where: standalone (adds to your day) or inside a routine item that holds to-dos (uses its time)
 // If it doesn't fit the time left (the day's free time, or that routine item's time), Add is disabled.
 export default function AddTodoSheet({ target, onClose, onSaved }) {
@@ -44,8 +44,9 @@ export default function AddTodoSheet({ target, onClose, onSaved }) {
     e?.preventDefault();
     if (!title.trim() || noTime) return;
     try {
-      await api.post('/todos', { title: title.trim(), date: when, kind, parentId, minutes, time });
-      buzz(20); onSaved(when);
+      // All-time starts today (it repeats every day anyway); a daily one goes on the day picked.
+      await api.post('/todos', { title: title.trim(), date: kind === 'always' ? t : when, kind, parentId, minutes, time });
+      buzz(20); onSaved(kind === 'always' ? t : when);
     } catch (err) { setError(err.message || 'Could not save'); }
   };
   const dates = target ? [[t, 'Today'], [addDays(t, 1), 'Tomorrow'], ...(target.date !== t && target.date !== addDays(t, 1) ? [[target.date, fmt(target.date, { day: 'numeric', month: 'short' })]] : [])] : [];
@@ -54,20 +55,24 @@ export default function AddTodoSheet({ target, onClose, onSaved }) {
     <Sheet open={!!target} onClose={onClose} title="New to-do">
       <form onSubmit={save}>
         <input className="input" data-autofocus placeholder="What needs doing?" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <label className="field-label">When</label>
-        <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-          {dates.map(([d, label]) => (
-            <button type="button" key={d} className="ghost-btn" style={when === d ? on : undefined} onClick={() => setWhen(d)}>{label}</button>
-          ))}
-        </div>
         <label className="field-label">Type</label>
         <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
           <button type="button" className="ghost-btn" style={kind === 'daily' ? on : undefined} onClick={() => setKind('daily')}>Just this day</button>
-          <button type="button" className="ghost-btn" style={kind === 'always' ? on : undefined} onClick={() => setKind('always')}>♾️ All-time</button>
+          <button type="button" className="ghost-btn" style={kind === 'always' ? on : undefined} onClick={() => { setKind('always'); setWhen(t); }}>♾️ All-time</button>
         </div>
         <div className="tiny faint" style={{ marginTop: 6 }}>
-          {kind === 'always' ? 'Shows on every day’s to-do list until you tick it.' : 'Only on this day. Not carried to the next day.'}
+          {kind === 'always' ? 'Starts today and shows on every day’s to-do list until you tick it.' : 'Only on the day you pick. Not carried to the next day.'}
         </div>
+        {kind === 'daily' && (
+          <>
+            <label className="field-label">When</label>
+            <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+              {dates.map(([d, label]) => (
+                <button type="button" key={d} className="ghost-btn" style={when === d ? on : undefined} onClick={() => setWhen(d)}>{label}</button>
+              ))}
+            </div>
+          </>
+        )}
         <label className="field-label">Where does it go?</label>
         <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
           {containers.map((c) => (

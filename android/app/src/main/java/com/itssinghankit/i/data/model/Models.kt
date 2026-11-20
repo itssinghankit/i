@@ -9,6 +9,16 @@ data class TodaySnapshot(
 ) {
     val routineDone get() = routine.count { it.done }
     val todosLeft get() = todos.count { !it.done }
+    /** Routine tab's bar: share of today's routine done (worked out here too, so an instant tick can update it). */
+    val routinePercent get() = if (routine.isEmpty()) 0 else Math.round(routineDone * 100f / routine.size)
+    /** To-do tab's bar: share of today's to-dos done. */
+    val todoPercent get() = if (todos.isEmpty()) 0 else Math.round((todos.size - todosLeft) * 100f / todos.size)
+
+    /** The same snapshot with some rows flipped (ticks tapped on the widget that the server hasn't confirmed yet). */
+    fun withFlips(flips: Map<String, Boolean>): TodaySnapshot = if (flips.isEmpty()) this else copy(
+        routine = routine.map { r -> flips[r.id]?.let { r.copy(done = it) } ?: r },
+        todos = todos.map { t -> flips[t.id]?.let { t.copy(done = it) } ?: t },
+    )
 }
 
 /** One routine item or to-do. kind = "routine" | "todo". color is #RRGGBB (routine only). */

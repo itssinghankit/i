@@ -15,12 +15,18 @@ import com.itssinghankit.i.data.model.TodayItem
 import com.itssinghankit.i.data.remote.SignedOutException
 import com.itssinghankit.i.di.container
 
-/** Supplies the rows of the widget list. onDataSetChanged runs on a background thread, so network is fine there. */
+/**
+ * Supplies the rows of one of the widget's two lists (Routine or To-do, from the intent's tab).
+ * onDataSetChanged runs on a background thread, so network is fine there.
+ */
 class TodayWidgetService : RemoteViewsService() {
-    override fun onGetViewFactory(intent: Intent): RemoteViewsFactory =
-        Factory(applicationContext, intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID))
+    override fun onGetViewFactory(intent: Intent): RemoteViewsFactory = Factory(
+        applicationContext,
+        intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID),
+        intent.getStringExtra(TodayWidgetProvider.EXTRA_TAB) ?: WidgetPrefs.ROUTINE,
+    )
 
-    private class Factory(val context: Context, val widgetId: Int) : RemoteViewsFactory {
+    private class Factory(val context: Context, val widgetId: Int, val tab: String) : RemoteViewsFactory {
         // A row is an item or a friendly message. (The Routine / To-do tabs replace section headers.)
         private sealed class Line {
             data class Item(val item: TodayItem) : Line()
@@ -40,12 +46,16 @@ class TodayWidgetService : RemoteViewsService() {
 
         override fun onDataSetChanged() {
             theme = WidgetTheme(context)   // the light / dark choice may have changed
+            val visible = WidgetPrefs.tab(context, widgetId) == tab
             lines = try {
-                val t = context.container.todayRepository.today()
+                // Right after a tap: from memory with the tap applied (instant). The hidden tab's list also
+                // uses memory when it has some, so one tap doesn't cost two network calls.
+                val fromMemory = WidgetState.useMemory() || (!visible && WidgetState.last != null)
+                val t = (if (fromMemory) WidgetState.last!! else context.container.todayRepository.today().also { WidgetState.last = it })
+                    .withFlips(WidgetState.flips)
                 date = t.date
-                header(t)
-                // Only the chosen tab's rows. Read each time, because tapping a tab reloads this list.
-                if (WidgetPrefs.tab(context, widgetId) == WidgetPrefs.TODO) {
+                if (visible) header(t) // only the list you're looking at moves the bar
+                if (tab == WidgetPrefs.TODO) {
                     if (t.todos.isEmpty()) listOf(Line.Message("✨", "No to-dos today. Tap + to add one."))
                     else t.todos.map { Line.Item(it) }
                 } else {
@@ -53,10 +63,11 @@ class TodayWidgetService : RemoteViewsService() {
                     else t.routine.map { Line.Item(it) }
                 }
             } catch (_: SignedOutException) {
-                header(null)
+                WidgetState.last = null
+                if (visible) header(null)
                 listOf(Line.Message("🔐", "Open i and sign in to see your routine and to-dos here."))
             } catch (_: Exception) {
-                header(null)
+                if (visible) header(null)
                 listOf(Line.Message("📡", "Can't reach the server right now.\nOpen the app to retry."))
             }
         }

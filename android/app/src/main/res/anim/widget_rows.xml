@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget: rows appear one after another (each starts 6% of a row's time after the one above). -->
+<layoutAnimation xmlns:android="http://schemas.android.com/apk/res/android"
+    android:animation="@anim/widget_row_in" android:delay="0.06" android:animationOrder="normal" />

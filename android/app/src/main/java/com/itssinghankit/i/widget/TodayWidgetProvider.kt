@@ -20,10 +20,12 @@ import java.time.ZonedDateTime
 
 /**
  * Resizable home-screen widget.
- *  Header: [☀️ Routine 3/8 | ✅ To-do 4 left] [+], then today's progress bar and %.
+ *  Header: [☀️ Routine 3/8 | ✅ To-do 4 left] [+], then the progress bar and % of the tab you're on
+ *          (Routine: routine done; To-do: to-dos done). The bar slides to its new value ([WidgetState.animateBar]).
  *          Tap a tab to switch (saved per widget in [WidgetPrefs]); "+" (To-do tab only) opens "add to-do" in the app.
+ *  Body:   two lists in a ViewFlipper, one per tab; switching fades + slides between them.
  *  Daily:  refreshes itself just after midnight, so a new day shows without opening the app.
- *  Body:   the chosen tab's rows (see [TodayWidgetService]). Tapping a row ticks / unticks it.
+ *  Rows:   (see [TodayWidgetService]) tapping one ticks / unticks it instantly, then saves it to the server.
  * Data comes from [com.itssinghankit.i.data.repository.TodayRepository] (same server as the app).
  */
 class TodayWidgetProvider : AppWidgetProvider() {
@@ -31,6 +33,7 @@ class TodayWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         ids.forEach { manager.updateAppWidget(it, build(context, it)) }
         manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
+        manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list_todo)
         scheduleMidnight(context)
     }
 
@@ -39,7 +42,7 @@ class TodayWidgetProvider : AppWidgetProvider() {
         context.getSystemService(AlarmManager::class.java).cancel(midnightIntent(context))
     }
 
-    override fun onDeleted(context: Context, ids: IntArray) = ids.forEach { WidgetPrefs.forget(context, it) }
+    override fun onDeleted(context: Context, ids: IntArray) = ids.forEach { WidgetPrefs.forget(context, it); WidgetState.forget(it) }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
@@ -54,22 +57,31 @@ class TodayWidgetProvider : AppWidgetProvider() {
             if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return
             WidgetPrefs.setTab(context, id, tab)
             val m = AppWidgetManager.getInstance(context)
-            m.partiallyUpdateAppWidget(id, RemoteViews(context.packageName, R.layout.widget_today).also { styleTabs(it, tab) })
-            m.notifyAppWidgetViewDataChanged(intArrayOf(id), R.id.widget_list) // list reloads for the new tab
+            m.partiallyUpdateAppWidget(id, RemoteViews(context.packageName, R.layout.widget_today).also {
+                styleTabs(it, tab)
+                it.setDisplayedChild(R.id.widget_flipper, if (tab == WidgetPrefs.TODO) 1 else 0) // fades + slides to that list
+            })
+            // That tab's list reloads; it also slides the bar to that tab's %.
+            m.notifyAppWidgetViewDataChanged(intArrayOf(id), if (tab == WidgetPrefs.TODO) R.id.widget_list_todo else R.id.widget_list)
             return
         }
         if (intent.action != ACTION_TOGGLE) return
+        val kind = intent.getStringExtra(EXTRA_KIND)
+        val id = intent.getStringExtra(EXTRA_ID)
+        val wasDone = intent.getBooleanExtra(EXTRA_DONE, false)
+        // 1. Flip it on the widget right away (the tick and the bar move now, not after the network).
+        if (id != null) { WidgetState.flip(id, !wasDone); refreshAll(context) }
+        // 2. Save it, then reload from the server (which also undoes the flip if saving failed).
         val pending = goAsync()
         Thread {
             try {
-                val kind = intent.getStringExtra(EXTRA_KIND)
-                val id = intent.getStringExtra(EXTRA_ID)
                 if (kind != null && id != null) {
-                    context.container.todayRepository.toggle(kind, id, intent.getStringExtra(EXTRA_DATE) ?: "", intent.getBooleanExtra(EXTRA_DONE, false))
+                    context.container.todayRepository.toggle(kind, id, intent.getStringExtra(EXTRA_DATE) ?: "", wasDone)
                 }
             } catch (_: Exception) {
-                /* offline or signed out: the list just stays as it was */
+                /* offline or signed out: the reload below shows the row as it really is */
             } finally {
+                if (id != null) WidgetState.settle(id)
                 refreshAll(context)
                 pending.finish() // always tell Android we're done, or it may kill the app
             }
@@ -79,20 +91,24 @@ class TodayWidgetProvider : AppWidgetProvider() {
     private fun build(context: Context, widgetId: Int): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_today)
 
-        val listIntent = Intent(context, TodayWidgetService::class.java).apply {
+        // One list per tab; each gets its own service intent (the different data URI keeps them apart).
+        fun listIntent(tab: String) = Intent(context, TodayWidgetService::class.java).apply {
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            putExtra(EXTRA_TAB, tab)
             data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
         }
-        views.setRemoteAdapter(R.id.widget_list, listIntent)
+        views.setRemoteAdapter(R.id.widget_list, listIntent(WidgetPrefs.ROUTINE))
         views.setEmptyView(R.id.widget_list, R.id.widget_empty)
+        views.setRemoteAdapter(R.id.widget_list_todo, listIntent(WidgetPrefs.TODO))
+        views.setEmptyView(R.id.widget_list_todo, R.id.widget_empty_todo)
+        views.setDisplayedChild(R.id.widget_flipper, if (WidgetPrefs.tab(context, widgetId) == WidgetPrefs.TODO) 1 else 0)
 
         // Row taps become a TOGGLE broadcast back to this provider.
         val toggle = Intent(context, TodayWidgetProvider::class.java).setAction(ACTION_TOGGLE)
-        views.setPendingIntentTemplate(
-            R.id.widget_list,
-            PendingIntent.getBroadcast(context, 0, toggle, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE),
-        )
-        WidgetTheme(context).let { it.background(views, R.id.widget_root, it.bg); it.ink3(views, R.id.widget_empty) }
+        val togglePi = PendingIntent.getBroadcast(context, 0, toggle, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+        views.setPendingIntentTemplate(R.id.widget_list, togglePi)
+        views.setPendingIntentTemplate(R.id.widget_list_todo, togglePi)
+        WidgetTheme(context).let { it.background(views, R.id.widget_root, it.bg); it.ink3(views, R.id.widget_empty); it.ink3(views, R.id.widget_empty_todo) }
         views.setOnClickPendingIntent(R.id.widget_tab_routine, tabIntent(context, widgetId, WidgetPrefs.ROUTINE))
         views.setOnClickPendingIntent(R.id.widget_tab_todo, tabIntent(context, widgetId, WidgetPrefs.TODO))
         styleTabs(views, WidgetPrefs.tab(context, widgetId))
@@ -152,7 +168,9 @@ class TodayWidgetProvider : AppWidgetProvider() {
         fun refreshAll(context: Context) {
             val m = AppWidgetManager.getInstance(context)
             val ids = m.getAppWidgetIds(ComponentName(context, TodayWidgetProvider::class.java))
-            if (ids.isNotEmpty()) m.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
+            if (ids.isEmpty()) return
+            m.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
+            m.notifyAppWidgetViewDataChanged(ids, R.id.widget_list_todo)
         }
 
         /** Selected tab = white pill + dark text; the other = plain grey text. */
@@ -175,13 +193,15 @@ class TodayWidgetProvider : AppWidgetProvider() {
                 v.setTextViewText(R.id.widget_tab_todo, "✅ To-do")
                 v.setTextViewText(R.id.widget_percent, "")
                 v.setProgressBar(R.id.widget_progress, 100, 0, false)
-            } else {
-                v.setTextViewText(R.id.widget_tab_routine, "☀️ Routine  ${t.routineDone}/${t.routine.size}")
-                v.setTextViewText(R.id.widget_tab_todo, if (t.todos.isEmpty()) "✅ To-do" else "✅ To-do  ${t.todosLeft} left")
-                v.setTextViewText(R.id.widget_percent, (if (t.percent >= 100) "🎉" else "") + "${t.percent}%")
-                v.setProgressBar(R.id.widget_progress, 100, t.percent.coerceIn(0, 100), false)
+                AppWidgetManager.getInstance(context).partiallyUpdateAppWidget(widgetId, v)
+                return
             }
+            v.setTextViewText(R.id.widget_tab_routine, "☀️ Routine  ${t.routineDone}/${t.routine.size}")
+            v.setTextViewText(R.id.widget_tab_todo, if (t.todos.isEmpty()) "✅ To-do" else "✅ To-do  ${t.todosLeft} left")
             AppWidgetManager.getInstance(context).partiallyUpdateAppWidget(widgetId, v)
+            // The bar and % follow the tab you're on, and slide to the new value.
+            val todoTab = WidgetPrefs.tab(context, widgetId) == WidgetPrefs.TODO
+            WidgetState.animateBar(context, widgetId, if (todoTab) t.todoPercent else t.routinePercent, emojiAt100 = !todoTab || t.todos.isNotEmpty())
         }
     }
 }
