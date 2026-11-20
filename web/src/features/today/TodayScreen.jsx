@@ -203,7 +203,9 @@ export default memo(function Home({ date, setDate, refreshKey, openWeekly, openA
                             {r.holdsTodos && (
                               <div style={{ padding: '0 16px 12px 70px' }}>
                                 {inside.map((t) => (
-                                  <div key={t._id} className="row" style={{ padding: '6px 0', gap: 10, opacity: t.noTime ? 0.55 : 1 }} onClick={() => toggleTodo(t)}>
+                                  <div key={t._id} className="inside-todo row" style={{ opacity: t.noTime ? 0.55 : 1 }} onClick={() => toggleTodo(t)}>
+                                    {/* A dot in the routine item's colour, centred on the first line, before each task */}
+                                    <span className="inside-dot" style={{ background: r.color }} aria-hidden="true" />
                                     <span style={{ minWidth: 0, flex: 1 }}>
                                       <span className={`small ${t.done ? 'faint' : ''}`} style={{ textDecoration: t.done ? 'line-through' : 'none', fontWeight: 500 }}>{t.title}</span>
                                       {t.time && <span className="tiny faint"> · {clockTime(t.time, t.minutes)}</span>}
@@ -212,7 +214,7 @@ export default memo(function Home({ date, setDate, refreshKey, openWeekly, openA
                                     <Check size={20} done={t.done} color={r.color} onToggle={() => toggleTodo(t)} />
                                   </div>
                                 ))}
-                                <button className="tiny bold row" style={{ gap: 4, color: r.color, marginTop: 4 }} onClick={(e) => { e.stopPropagation(); openAddTodo({ date, parentId: r._id }); }}>
+                                <button className="tiny bold row" style={{ gap: 4, color: r.color, marginTop: 8 }} onClick={(e) => { e.stopPropagation(); openAddTodo({ date, parentId: r._id }); }}>
                                   <Plus size={14} /> Add a task to {r.title}
                                 </button>
                               </div>

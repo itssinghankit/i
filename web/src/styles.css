@@ -309,3 +309,9 @@ h2 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; margin: 0; }
 .add-first { width: 100%; padding: 16px; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--violet); font-weight: 700; border-style: dashed; box-shadow: none; }
 .input.textarea { height: auto; min-height: 130px; padding: 12px 14px; resize: vertical; line-height: 1.5; }
 .primary-btn:disabled { opacity: .5; }
+
+/* Tasks inside a routine item on Today (e.g. Office work): a bit of room between them, and a coloured dot before each */
+.inside-todo { padding: 9px 0; gap: 10px; align-items: flex-start; }
+.inside-todo + .inside-todo { border-top: 1px dashed var(--line); }
+.inside-todo .inside-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; margin-top: 7px; }
+.inside-todo .check { flex: none; }
